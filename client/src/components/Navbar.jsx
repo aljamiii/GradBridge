@@ -34,6 +34,9 @@ export default function Navbar() {
                 <Link to="/cost-predictor" className="text-sm font-medium text-slate-700 hover:text-indigo-600">
                   Cost Predictor
                 </Link>
+                <Link to="/eligibility" className="text-sm font-medium text-slate-700 hover:text-indigo-600">
+                  Eligibility
+                </Link>
               </>
             )}
             <Link to="/profile" className="text-sm font-medium text-slate-700 hover:text-indigo-600">
