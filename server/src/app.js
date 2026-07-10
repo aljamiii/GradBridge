@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 import healthRoutes from "./routes/health.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import userRoutes from "./routes/user.routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(express.json());    // parse JSON request bodies into req.body
 // --- Routes (each feature gets its own file in src/routes) ---
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
 // --- Error handling (must be registered last) ---
 app.use(errorHandler);

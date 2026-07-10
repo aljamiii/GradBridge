@@ -36,6 +36,16 @@ const userSchema = new mongoose.Schema(
       researchInterest: String,
       preferredCountry: String,
       budgetUSD: Number, // yearly budget in USD
+
+      // Lifestyle preferences (FR #3) — feed the AI compatibility/risk features
+      weatherTolerance: {
+        type: String,
+        enum: ["prefer-warm", "prefer-cold", "no-preference"],
+      },
+      communityPriority: {
+        type: String, // how important is a Bangladeshi/Muslim community nearby?
+        enum: ["low", "medium", "high"],
+      },
     },
 
     // --- Mentor/Ambassador profile (FR #1) ---
@@ -43,6 +53,8 @@ const userSchema = new mongoose.Schema(
       qualification: String, // e.g., "MSc, University of Toronto"
       university: String,
       expertise: [String], // e.g., ["SOP review", "Canada visas"]
+      availability: String, // e.g., "Weekends, 8-10pm BD time"
+      isVisible: { type: Boolean, default: true }, // mentor can hide from search
       isVerified: { type: Boolean, default: false }, // admin approves (FR #2)
     },
   },

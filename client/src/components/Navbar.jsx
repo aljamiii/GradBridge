@@ -26,6 +26,9 @@ export default function Navbar() {
             <Link to="/dashboard" className="text-sm font-medium text-slate-700 hover:text-indigo-600">
               Dashboard
             </Link>
+            <Link to="/profile" className="text-sm font-medium text-slate-700 hover:text-indigo-600">
+              Profile
+            </Link>
             <button
               onClick={handleLogout}
               className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"

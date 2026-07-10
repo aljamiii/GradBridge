@@ -42,8 +42,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // Save profile changes and refresh the shared user object.
+  const updateProfile = async (form) => {
+    const data = await api("/api/users/profile", { method: "PUT", body: form });
+    setUser(data.user);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, register, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, register, login, logout, updateProfile }}
+    >
       {children}
     </AuthContext.Provider>
   );

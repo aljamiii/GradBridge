@@ -6,7 +6,7 @@ const roleContent = {
     emoji: "🎓",
     title: "Student Dashboard",
     next: [
-      "Complete your academic profile (coming in Phase 2b)",
+      "Complete your academic profile (Profile page in the navbar)",
       "Explore universities & programs (Phase 3)",
       "Get your AI cost prediction (Phase 4)",
     ],
