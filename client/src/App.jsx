@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import AdminMentors from "./pages/AdminMentors";
+import Universities from "./pages/Universities";
 
 export default function App() {
   return (
@@ -38,6 +39,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={["admin"]}>
               <AdminMentors />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/universities"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <Universities />
             </ProtectedRoute>
           }
         />
