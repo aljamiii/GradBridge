@@ -2,6 +2,8 @@
 // We proxy through our backend instead of calling it from React because:
 //   1. no CORS problems, 2. we can cache results, 3. one place to handle errors.
 
+import popularUniversities from "../data/popularUniversities.js";
+
 const HIPOLABS = "http://universities.hipolabs.com/search";
 
 // Tiny in-memory cache: identical searches within 1 hour are served instantly
@@ -38,14 +40,30 @@ export const searchUniversities = async (req, res, next) => {
     if (!response.ok) throw new Error(`Universities API responded ${response.status}`);
     const raw = await response.json();
 
-    // Reshape into clean fields our frontend needs (cap at 50 results).
-    const universities = raw.slice(0, 50).map((u) => ({
+    // Reshape into clean fields our frontend needs.
+    let universities = raw.map((u) => ({
       name: u.name,
       country: u.country,
       stateProvince: u["state-province"] || null,
       website: u.web_pages?.[0] || null,
       domain: u.domains?.[0] || null,
     }));
+
+    // Country search: float curated "popular" universities to the top
+    // (Hipolabs has no ranking data). Must happen BEFORE the 50-result cap.
+    const popularList = popularUniversities[country.toLowerCase()] ?? [];
+    if (popularList.length) {
+      const rank = new Map(popularList.map((n, i) => [n.toLowerCase(), i]));
+      universities = universities
+        .map((u) => ({ ...u, popular: rank.has(u.name.toLowerCase()) }))
+        .sort((a, b) => {
+          const ra = rank.get(a.name.toLowerCase()) ?? Infinity;
+          const rb = rank.get(b.name.toLowerCase()) ?? Infinity;
+          return ra - rb;
+        });
+    }
+
+    universities = universities.slice(0, 50);
 
     cache.set(key, { data: universities, expires: Date.now() + CACHE_TTL_MS });
 

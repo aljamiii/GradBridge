@@ -10,7 +10,14 @@ function ResultCard({ uni, savedNames, onSave, busy }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div>
-        <h3 className="font-semibold text-slate-800">{uni.name}</h3>
+        <h3 className="font-semibold text-slate-800">
+          {uni.name}
+          {uni.popular && (
+            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+              ⭐ Popular
+            </span>
+          )}
+        </h3>
         <p className="text-sm text-slate-500">
           {[uni.stateProvince, uni.country].filter(Boolean).join(", ")}
           {uni.website && (
