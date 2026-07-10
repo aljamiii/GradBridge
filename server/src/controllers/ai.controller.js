@@ -1,6 +1,8 @@
 // CONTROLLER: AI features powered by Gemini (Module 1 & 2 of the spec).
-import { generateJSON } from "../services/gemini.js";
+import { generateJSON, generateText, embedText } from "../services/gemini.js";
 import { getRatesUSD } from "../services/exchangeRate.js";
+import { getWeather } from "../services/weather.js";
+import KnowledgeChunk from "../models/KnowledgeChunk.js";
 
 // ---------- AI Budget & Cost Predictor ----------
 // Spec: student inputs target country, city, lifestyle level → AI generates a
@@ -217,6 +219,113 @@ Rules:
     eligibilityCache.set(key, { data, expires: Date.now() + ELIG_CACHE_TTL_MS });
 
     res.json({ success: true, cached: false, ...data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ---------- AI Destination Advisor (RAG) ----------
+// Spec: free-form questions about a city/country → the AI retrieves live
+// weather data and a curated knowledge base to generate accurate,
+// location-specific answers.
+//
+// The RAG loop:
+//   1. EMBED the question into a vector
+//   2. RETRIEVE the most similar knowledge chunks (cosine similarity)
+//   3. AUGMENT the prompt with those chunks + live weather
+//   4. GENERATE an answer grounded ONLY in that context
+
+// Cosine similarity: 1 = same meaning, 0 = unrelated.
+const cosine = (a, b) => {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+};
+
+// The knowledge base is small (~24 chunks), so we keep it in memory and
+// compare in-app instead of configuring Atlas Vector Search. Reload every
+// 10 minutes so a re-seed is picked up without restarting.
+let chunkCache = null;
+let chunkCacheExpires = 0;
+const loadChunks = async () => {
+  if (chunkCache && chunkCacheExpires > Date.now()) return chunkCache;
+  chunkCache = await KnowledgeChunk.find({}).lean();
+  chunkCacheExpires = Date.now() + 10 * 60 * 1000;
+  return chunkCache;
+};
+
+const TOP_K = 4;             // how many chunks to hand to Gemini
+const MIN_SIMILARITY = 0.45; // below this, a chunk is probably irrelevant
+
+// POST /api/ai/destination-advisor   body: { question }
+export const askDestinationAdvisor = async (req, res, next) => {
+  try {
+    const question = (req.body.question || "").trim();
+    if (question.length < 5) {
+      return res.status(400).json({ success: false, message: "Please ask a full question." });
+    }
+
+    const chunks = await loadChunks();
+    if (chunks.length === 0) {
+      return res.status(503).json({
+        success: false,
+        message: "Knowledge base is empty — run: node src/scripts/seedKnowledge.js",
+      });
+    }
+
+    // 1. EMBED the question
+    const qVector = await embedText(question);
+
+    // 2. RETRIEVE top-K most similar chunks
+    const scored = chunks
+      .map((c) => ({ ...c, score: cosine(qVector, c.embedding) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, TOP_K)
+      .filter((c) => c.score >= MIN_SIMILARITY);
+
+    // 3. AUGMENT: live weather for the city the best chunks are about
+    const topCity = scored[0] ? { city: scored[0].city, country: scored[0].country } : null;
+    const weather = topCity ? await getWeather(topCity.city) : null;
+
+    const context = scored
+      .map((c, i) => `[Source ${i + 1}: ${c.city}, ${c.country} — ${c.topic}]\n${c.text}`)
+      .join("\n\n");
+
+    const weatherLine = weather
+      ? `\n\nLIVE WEATHER RIGHT NOW in ${weather.city}: ${weather.tempC}°C (feels like ${weather.feelsLikeC}°C), ${weather.description}, humidity ${weather.humidity}%.`
+      : "";
+
+    const prompt = `You are GradBridge's destination advisor for Bangladeshi students planning to study abroad.
+
+Answer the student's question using ONLY the context below. Rules:
+- If the context doesn't contain the answer, say honestly that your guide doesn't cover it yet and suggest asking a country ambassador — DO NOT invent facts.
+- Be specific and practical; write 1 short paragraph or a few bullet points, not an essay.
+- If live weather is provided and relevant, weave it in naturally.
+- Answer in the same language the student asked in (English or Bangla).
+
+CONTEXT:
+${context || "(no relevant guide sections found)"}${weatherLine}
+
+STUDENT'S QUESTION: ${question}`;
+
+    // 4. GENERATE
+    const answer = await generateText(prompt);
+
+    res.json({
+      success: true,
+      answer,
+      sources: scored.map((c) => ({
+        city: c.city,
+        country: c.country,
+        topic: c.topic,
+        similarity: Math.round(c.score * 100) / 100,
+      })),
+      weather,
+    });
   } catch (err) {
     next(err);
   }

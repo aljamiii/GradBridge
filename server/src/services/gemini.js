@@ -42,3 +42,19 @@ export async function generateJSON(prompt, schema) {
   });
   return JSON.parse(response.text);
 }
+
+// ---- Embeddings (for RAG) ----
+// Turns text into a vector of numbers where similar meanings sit close
+// together. 768 dimensions is plenty for our knowledge base and keeps
+// documents small.
+const EMBED_MODEL = process.env.GEMINI_EMBED_MODEL || "gemini-embedding-001";
+const EMBED_DIMS = 768;
+
+export async function embedText(text) {
+  const response = await getClient().models.embedContent({
+    model: EMBED_MODEL,
+    contents: text,
+    config: { outputDimensionality: EMBED_DIMS },
+  });
+  return response.embeddings[0].values;
+}

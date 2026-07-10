@@ -11,6 +11,7 @@ import AdminMentors from "./pages/AdminMentors";
 import Universities from "./pages/Universities";
 import CostPredictor from "./pages/CostPredictor";
 import Eligibility from "./pages/Eligibility";
+import DestinationAdvisor from "./pages/DestinationAdvisor";
 
 export default function App() {
   return (
@@ -65,6 +66,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={["student"]}>
               <Eligibility />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/destination-advisor"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <DestinationAdvisor />
             </ProtectedRoute>
           }
         />
