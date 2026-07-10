@@ -6,6 +6,27 @@ import popularUniversities from "../data/popularUniversities.js";
 
 const HIPOLABS = "http://universities.hipolabs.com/search";
 
+// Hipolabs only knows official country names ("United States", not "usa").
+// Map the short forms students actually type to the official name.
+const COUNTRY_ALIASES = {
+  usa: "United States",
+  us: "United States",
+  america: "United States",
+  "united states of america": "United States",
+  uk: "United Kingdom",
+  britain: "United Kingdom",
+  "great britain": "United Kingdom",
+  england: "United Kingdom",
+  scotland: "United Kingdom",
+  uae: "United Arab Emirates",
+  "south korea": "Korea, Republic of",
+  korea: "Korea, Republic of",
+  russia: "Russian Federation",
+  iran: "Iran, Islamic Republic of",
+  czechia: "Czech Republic",
+  holland: "Netherlands",
+};
+
 // Tiny in-memory cache: identical searches within 1 hour are served instantly
 // without hitting the external API again. (Your spec: "results are cached".)
 const cache = new Map(); // key → { data, expires }
@@ -15,7 +36,10 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 export const searchUniversities = async (req, res, next) => {
   try {
     const name = (req.query.name || "").trim();
-    const country = (req.query.country || "").trim();
+    let country = (req.query.country || "").trim();
+
+    // "usa" → "United States", "uk" → "United Kingdom", etc.
+    country = COUNTRY_ALIASES[country.toLowerCase()] ?? country;
 
     if (!name && !country) {
       return res
