@@ -1,9 +1,10 @@
-// Wraps any page that requires login.
-// Not logged in? → redirected to /login. Still checking? → brief blank state.
+// Wraps any page that requires login (and optionally specific roles).
+//   <ProtectedRoute> ... </ProtectedRoute>                → any logged-in user
+//   <ProtectedRoute roles={["admin"]}> ... </ProtectedRoute> → admins only
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-export default function ProtectedRoute({ children }) {
+export default function ProtectedRoute({ roles, children }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -11,6 +12,10 @@ export default function ProtectedRoute({ children }) {
   }
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+  // Logged in but wrong role → send to their own dashboard, not an error page.
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
   }
   return children;
 }

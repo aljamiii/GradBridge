@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 // Role-specific welcome content; grows into the real dashboard in later phases.
@@ -23,10 +24,8 @@ const roleContent = {
   admin: {
     emoji: "🛡️",
     title: "Admin Dashboard",
-    next: [
-      "Review pending mentor verifications",
-      "Monitor scraped data quality (Phase 7)",
-    ],
+    next: ["Monitor scraped data quality (Phase 7)"],
+    actions: [{ to: "/admin/mentors", label: "Review mentor applications →" }],
   },
 };
 
@@ -50,6 +49,16 @@ export default function Dashboard() {
           What&apos;s next
         </h2>
         <ul className="mt-3 space-y-2">
+          {content.actions?.map((a) => (
+            <li key={a.to}>
+              <Link
+                to={a.to}
+                className="font-medium text-indigo-600 hover:underline"
+              >
+                {a.label}
+              </Link>
+            </li>
+          ))}
           {content.next.map((item) => (
             <li key={item} className="flex items-start gap-2 text-slate-700">
               <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500" />

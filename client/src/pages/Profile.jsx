@@ -148,7 +148,16 @@ function MentorForm({ user, onSave, saving }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {!p.isVerified && (
+      {p.verificationStatus === "approved" ? (
+        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          ✅ Verified mentor — you appear in student searches.
+        </div>
+      ) : p.verificationStatus === "rejected" ? (
+        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          ❌ Your application was rejected. Update your profile details and
+          contact support if you believe this is a mistake.
+        </div>
+      ) : (
         <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-700">
           ⏳ Your account is awaiting admin verification. You won&apos;t appear in
           student searches until approved.

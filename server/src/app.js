@@ -5,6 +5,7 @@ import cors from "cors";
 import healthRoutes from "./routes/health.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(express.json());    // parse JSON request bodies into req.body
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/admin", adminRoutes);
 
 // --- Error handling (must be registered last) ---
 app.use(errorHandler);

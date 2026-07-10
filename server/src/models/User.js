@@ -55,7 +55,12 @@ const userSchema = new mongoose.Schema(
       expertise: [String], // e.g., ["SOP review", "Canada visas"]
       availability: String, // e.g., "Weekends, 8-10pm BD time"
       isVisible: { type: Boolean, default: true }, // mentor can hide from search
-      isVerified: { type: Boolean, default: false }, // admin approves (FR #2)
+      // Admin decision (FR #2): only "approved" mentors appear in student search.
+      verificationStatus: {
+        type: String,
+        enum: ["pending", "approved", "rejected"],
+        default: "pending",
+      },
     },
   },
   { timestamps: true }

@@ -29,8 +29,8 @@ export const updateProfile = async (req, res, next) => {
     }
     if (user.role === "mentor" && mentorProfile) {
       const merged = { ...user.mentorProfile?.toObject?.(), ...mentorProfile };
-      // isVerified is admin-only — never trust it from the client (FR #2).
-      merged.isVerified = user.mentorProfile?.isVerified ?? false;
+      // verificationStatus is admin-only — never trust it from the client (FR #2).
+      merged.verificationStatus = user.mentorProfile?.verificationStatus ?? "pending";
       user.mentorProfile = merged;
     }
 
