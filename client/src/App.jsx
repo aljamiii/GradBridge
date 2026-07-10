@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import AdminMentors from "./pages/AdminMentors";
 import Universities from "./pages/Universities";
+import CostPredictor from "./pages/CostPredictor";
 
 export default function App() {
   return (
@@ -47,6 +48,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={["student"]}>
               <Universities />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cost-predictor"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <CostPredictor />
             </ProtectedRoute>
           }
         />

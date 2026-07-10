@@ -8,6 +8,7 @@ import userRoutes from "./routes/user.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import universityRoutes from "./routes/university.routes.js";
 import favoriteRoutes from "./routes/favorite.routes.js";
+import aiRoutes from "./routes/ai.routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 
 const app = express();
@@ -23,6 +24,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/universities", universityRoutes);
 app.use("/api/favorites", favoriteRoutes);
+app.use("/api/ai", aiRoutes);
 
 // --- Error handling (must be registered last) ---
 app.use(errorHandler);

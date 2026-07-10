@@ -27,9 +27,14 @@ export default function Navbar() {
               Dashboard
             </Link>
             {user.role === "student" && (
-              <Link to="/universities" className="text-sm font-medium text-slate-700 hover:text-indigo-600">
-                Universities
-              </Link>
+              <>
+                <Link to="/universities" className="text-sm font-medium text-slate-700 hover:text-indigo-600">
+                  Universities
+                </Link>
+                <Link to="/cost-predictor" className="text-sm font-medium text-slate-700 hover:text-indigo-600">
+                  Cost Predictor
+                </Link>
+              </>
             )}
             <Link to="/profile" className="text-sm font-medium text-slate-700 hover:text-indigo-600">
               Profile
