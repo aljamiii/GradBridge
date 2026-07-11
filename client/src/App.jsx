@@ -17,6 +17,8 @@ import Bookings from "./pages/Bookings";
 import Chat from "./pages/Chat";
 import NetworkMap from "./pages/NetworkMap";
 import SurvivalGuide from "./pages/SurvivalGuide";
+import Forum from "./pages/Forum";
+import ForumInsights from "./pages/ForumInsights";
 
 export default function App() {
   return (
@@ -103,6 +105,22 @@ export default function App() {
           element={
             <ProtectedRoute roles={["student"]}>
               <SurvivalGuide />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/forum"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <Forum />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/forum/insights"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <ForumInsights />
             </ProtectedRoute>
           }
         />

@@ -55,6 +55,7 @@ export default function Navbar() {
             )}
             {(user.role === "student" || user.role === "mentor") && (
               <>
+                <Link to="/forum" className={linkClass}>Forum</Link>
                 <Link to="/bookings" className={linkClass}>Sessions</Link>
                 <Link to="/chat" className={`${linkClass} relative`}>
                   Chat
