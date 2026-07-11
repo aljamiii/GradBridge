@@ -49,6 +49,7 @@ export default function Navbar() {
                 <Link to="/eligibility" className={linkClass}>Eligibility</Link>
                 <Link to="/destination-advisor" className={linkClass}>Advisor</Link>
                 <Link to="/mentors" className={linkClass}>Mentors</Link>
+                <Link to="/network-map" className={linkClass}>Network</Link>
               </>
             )}
             {(user.role === "student" || user.role === "mentor") && (

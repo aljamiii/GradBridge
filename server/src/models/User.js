@@ -46,6 +46,19 @@ const userSchema = new mongoose.Schema(
         type: String, // how important is a Bangladeshi/Muslim community nearby?
         enum: ["low", "medium", "high"],
       },
+
+      // Network Map: students ALREADY abroad can opt in to be plotted so
+      // future students can find peers in their target city.
+      abroad: {
+        optIn: { type: Boolean, default: false },
+        city: String,
+        country: String,
+        university: String,
+        degreeLevel: { type: String, enum: ["Bachelors", "Masters", "PhD"] },
+        subject: String, // e.g., "Computer Science"
+        lat: Number, // geocoded server-side via Nominatim
+        lng: Number,
+      },
     },
 
     // --- Mentor/Ambassador profile (FR #1) ---

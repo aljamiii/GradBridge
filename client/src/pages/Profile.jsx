@@ -18,6 +18,7 @@ function Field({ label, children }) {
 // ---------- Student form (FR #3: academic + lifestyle preferences) ----------
 function StudentForm({ user, onSave, saving }) {
   const p = user.studentProfile ?? {};
+  const a = p.abroad ?? {};
   const [form, setForm] = useState({
     degree: p.degree ?? "",
     cgpa: p.cgpa ?? "",
@@ -28,6 +29,13 @@ function StudentForm({ user, onSave, saving }) {
     budgetUSD: p.budgetUSD ?? "",
     weatherTolerance: p.weatherTolerance ?? "no-preference",
     communityPriority: p.communityPriority ?? "medium",
+    // Network map (for students already abroad)
+    abroadOptIn: a.optIn ?? false,
+    abroadCity: a.city ?? "",
+    abroadCountry: a.country ?? "",
+    abroadUniversity: a.university ?? "",
+    abroadDegreeLevel: a.degreeLevel ?? "Masters",
+    abroadSubject: a.subject ?? "",
   });
 
   const set = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -47,6 +55,14 @@ function StudentForm({ user, onSave, saving }) {
         budgetUSD: form.budgetUSD === "" ? undefined : Number(form.budgetUSD),
         weatherTolerance: form.weatherTolerance,
         communityPriority: form.communityPriority,
+        abroad: {
+          optIn: form.abroadOptIn,
+          city: form.abroadCity,
+          country: form.abroadCountry,
+          university: form.abroadUniversity,
+          degreeLevel: form.abroadDegreeLevel,
+          subject: form.abroadSubject,
+        },
       },
     });
   };
@@ -110,6 +126,42 @@ function StudentForm({ user, onSave, saving }) {
           </select>
         </Field>
       </div>
+
+      <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        🗺️ Network Map
+      </h2>
+      <label className="flex items-center gap-2 text-sm text-slate-700">
+        <input type="checkbox" checked={form.abroadOptIn}
+          onChange={(e) => setForm({ ...form, abroadOptIn: e.target.checked })}
+          className="h-4 w-4 rounded border-slate-300" />
+        I&apos;m already studying abroad — show me on the network map so others can find me
+      </label>
+      {form.abroadOptIn && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="City">
+            <input name="abroadCity" value={form.abroadCity} onChange={set}
+              placeholder="Toronto" className={inputClass} />
+          </Field>
+          <Field label="Country">
+            <input name="abroadCountry" value={form.abroadCountry} onChange={set}
+              placeholder="Canada" className={inputClass} />
+          </Field>
+          <Field label="University">
+            <input name="abroadUniversity" value={form.abroadUniversity} onChange={set}
+              placeholder="University of Toronto" className={inputClass} />
+          </Field>
+          <Field label="Degree level">
+            <select name="abroadDegreeLevel" value={form.abroadDegreeLevel} onChange={set}
+              className={inputClass}>
+              {["Bachelors", "Masters", "PhD"].map((d) => <option key={d}>{d}</option>)}
+            </select>
+          </Field>
+          <Field label="Subject">
+            <input name="abroadSubject" value={form.abroadSubject} onChange={set}
+              placeholder="Computer Science" className={inputClass} />
+          </Field>
+        </div>
+      )}
 
       <button type="submit" disabled={saving}
         className="rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">

@@ -1,5 +1,6 @@
 // CONTROLLER: profile management (FR #3).
 // The logged-in user updates their own role-specific profile.
+import { geocodePlace } from "../services/geocode.js";
 
 // Shape the user object we send back (same as auth controller).
 const publicUser = (user) => ({
@@ -25,7 +26,25 @@ export const updateProfile = async (req, res, next) => {
     // Role-specific: students may only edit studentProfile, mentors only mentorProfile.
     if (user.role === "student" && studentProfile) {
       // Merge so a partial update doesn't wipe fields the form didn't send.
-      user.studentProfile = { ...user.studentProfile?.toObject?.(), ...studentProfile };
+      const merged = { ...user.studentProfile?.toObject?.(), ...studentProfile };
+
+      // Network map: if the abroad location changed (or was never geocoded),
+      // look up its coordinates via the free Nominatim geocoder.
+      const abroad = merged.abroad;
+      const prev = user.studentProfile?.abroad;
+      if (abroad?.optIn && abroad.city && abroad.country) {
+        const moved =
+          abroad.city !== prev?.city ||
+          abroad.country !== prev?.country ||
+          abroad.university !== prev?.university;
+        if (moved || abroad.lat == null) {
+          const coords = await geocodePlace(abroad);
+          abroad.lat = coords?.lat ?? null;
+          abroad.lng = coords?.lng ?? null;
+        }
+      }
+
+      user.studentProfile = merged;
     }
     if (user.role === "mentor" && mentorProfile) {
       const merged = { ...user.mentorProfile?.toObject?.(), ...mentorProfile };
@@ -42,6 +61,41 @@ export const updateProfile = async (req, res, next) => {
       const firstMessage = Object.values(err.errors)[0].message;
       return res.status(400).json({ success: false, message: firstMessage });
     }
+    next(err);
+  }
+};
+
+// GET /api/users/network-map — pins for verified, opted-in students abroad.
+// Spec (Module 1 #3): plotted by city/university, filterable by country,
+// degree, and subject (filtering happens client-side on this data).
+export const getNetworkMap = async (req, res, next) => {
+  try {
+    const User = (await import("../models/User.js")).default;
+    const students = await User.find({
+      role: "student",
+      "studentProfile.abroad.optIn": true,
+      "studentProfile.abroad.lat": { $ne: null },
+    }).select("name studentProfile.abroad");
+
+    res.json({
+      success: true,
+      count: students.length,
+      pins: students.map((s) => {
+        const a = s.studentProfile.abroad;
+        return {
+          id: s._id,
+          name: s.name,
+          city: a.city,
+          country: a.country,
+          university: a.university,
+          degreeLevel: a.degreeLevel,
+          subject: a.subject,
+          lat: a.lat,
+          lng: a.lng,
+        };
+      }),
+    });
+  } catch (err) {
     next(err);
   }
 };

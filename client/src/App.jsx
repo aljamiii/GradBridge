@@ -15,6 +15,7 @@ import DestinationAdvisor from "./pages/DestinationAdvisor";
 import Mentors from "./pages/Mentors";
 import Bookings from "./pages/Bookings";
 import Chat from "./pages/Chat";
+import NetworkMap from "./pages/NetworkMap";
 
 export default function App() {
   return (
@@ -85,6 +86,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={["student"]}>
               <Mentors />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/network-map"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <NetworkMap />
             </ProtectedRoute>
           }
         />
