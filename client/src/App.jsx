@@ -12,6 +12,9 @@ import Universities from "./pages/Universities";
 import CostPredictor from "./pages/CostPredictor";
 import Eligibility from "./pages/Eligibility";
 import DestinationAdvisor from "./pages/DestinationAdvisor";
+import Mentors from "./pages/Mentors";
+import Bookings from "./pages/Bookings";
+import Chat from "./pages/Chat";
 
 export default function App() {
   return (
@@ -74,6 +77,30 @@ export default function App() {
           element={
             <ProtectedRoute roles={["student"]}>
               <DestinationAdvisor />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mentors"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <Mentors />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/bookings"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <Bookings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <Chat />
             </ProtectedRoute>
           }
         />

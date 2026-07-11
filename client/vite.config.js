@@ -10,6 +10,11 @@ export default defineConfig({
     // so the React code can simply call fetch("/api/health").
     proxy: {
       "/api": "http://localhost:5000",
+      // WebSocket proxy for real-time chat (Socket.io)
+      "/socket.io": {
+        target: "http://localhost:5000",
+        ws: true,
+      },
     },
   },
 });
