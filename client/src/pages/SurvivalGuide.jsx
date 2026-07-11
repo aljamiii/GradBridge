@@ -75,6 +75,10 @@ export default function SurvivalGuide() {
         bounds.push([p.lat, p.lng]);
       }
     }
+
+    // Re-measure the container before zooming — cures white/unrendered tiles
+    // if anything about the layout shifted since the map was created.
+    map.invalidateSize();
     map.fitBounds(L.latLngBounds(bounds).pad(0.15), { maxZoom: 15 });
   }, [result]);
 
@@ -133,8 +137,10 @@ export default function SurvivalGuide() {
         <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
+      {/* Fixed height: resizing a live Leaflet map leaves unrendered white
+          areas unless invalidateSize() is called — simplest is not to resize. */}
       <div ref={mapDivRef}
-        className={`mt-5 w-full rounded-xl border border-slate-200 shadow-sm ${result ? "h-[50vh]" : "h-[30vh]"}`} />
+        className="mt-5 h-[50vh] w-full rounded-xl border border-slate-200 shadow-sm" />
 
       {/* Category lists */}
       {result && (
