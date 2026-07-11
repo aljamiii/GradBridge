@@ -22,6 +22,8 @@ import ForumInsights from "./pages/ForumInsights";
 import Compatibility from "./pages/Compatibility";
 import FinancialRisk from "./pages/FinancialRisk";
 import VisaChecklist from "./pages/VisaChecklist";
+import Scholarships from "./pages/Scholarships";
+import AdminScholarships from "./pages/AdminScholarships";
 
 export default function App() {
   return (
@@ -148,6 +150,22 @@ export default function App() {
           element={
             <ProtectedRoute roles={["student"]}>
               <VisaChecklist />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/scholarships"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <Scholarships />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/scholarships"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminScholarships />
             </ProtectedRoute>
           }
         />

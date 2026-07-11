@@ -5,10 +5,12 @@ import http from "node:http";
 import app from "./src/app.js";
 import connectDB from "./src/config/db.js";
 import { initSocket } from "./src/socket.js";
+import { startScheduler } from "./src/config/scheduler.js";
 
 const PORT = process.env.PORT || 5000;
 
 await connectDB();
+startScheduler();
 
 // Express handles normal requests; Socket.io shares the same HTTP server.
 const server = http.createServer(app);

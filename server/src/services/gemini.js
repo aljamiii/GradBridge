@@ -37,6 +37,9 @@ export async function generateJSON(prompt, schema) {
     contents: prompt,
     config: {
       responseMimeType: "application/json",
+      // Deterministic output: same input → same fields. Matters for the
+      // scraper's duplicate detection (paraphrased titles break fingerprints).
+      temperature: 0,
       ...(schema ? { responseSchema: schema } : {}),
     },
   });

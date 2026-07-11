@@ -24,8 +24,11 @@ const roleContent = {
   admin: {
     emoji: "🛡️",
     title: "Admin Dashboard",
-    next: ["Monitor scraped data quality (Phase 7)"],
-    actions: [{ to: "/admin/mentors", label: "Review mentor applications →" }],
+    next: [],
+    actions: [
+      { to: "/admin/mentors", label: "Review mentor applications →" },
+      { to: "/admin/scholarships", label: "Review scraped scholarship data →" },
+    ],
   },
 };
 
