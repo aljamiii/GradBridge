@@ -64,7 +64,9 @@ export default function Chat() {
     socket?.emit("convo:join", activeId);
 
     const onNew = (msg) => {
-      if (msg.conversation === activeId) setMessages((m) => [...m, msg]);
+      if (msg.conversation !== activeId) return;
+      // Dedupe: our own messages arrive twice (send-ack + room broadcast).
+      setMessages((m) => (m.some((x) => x._id === msg._id) ? m : [...m, msg]));
     };
     socket?.on("message:new", onNew);
 
@@ -84,9 +86,14 @@ export default function Chat() {
     const text = draft.trim();
     if (!text || !activeId) return;
     setDraft("");
-    // The ack adds our own message; others arrive via the room broadcast.
+    // The ack adds our own message; the room broadcast may deliver it too,
+    // so both paths dedupe by _id.
     getSocket()?.emit("message:send", { conversationId: activeId, text }, (res) => {
-      if (res?.ok) setMessages((m) => [...m, res.message]);
+      if (res?.ok) {
+        setMessages((m) =>
+          m.some((x) => x._id === res.message._id) ? m : [...m, res.message]
+        );
+      }
     });
   };
 
