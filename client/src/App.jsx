@@ -24,6 +24,7 @@ import FinancialRisk from "./pages/FinancialRisk";
 import VisaChecklist from "./pages/VisaChecklist";
 import Scholarships from "./pages/Scholarships";
 import AdminScholarships from "./pages/AdminScholarships";
+import SuccessPath from "./pages/SuccessPath";
 
 export default function App() {
   return (
@@ -158,6 +159,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={["student", "mentor"]}>
               <Scholarships />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/success-path"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <SuccessPath />
             </ProtectedRoute>
           }
         />

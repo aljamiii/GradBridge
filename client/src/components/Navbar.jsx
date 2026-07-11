@@ -35,6 +35,7 @@ function Menu({ label, items }) {
 const EXPLORE_ITEMS = [
   { to: "/universities", label: "🎓 Universities" },
   { to: "/scholarships", label: "🎁 Scholarships" },
+  { to: "/success-path", label: "📈 Success Paths" },
   { to: "/network-map", label: "🗺️ Network Map" },
   { to: "/survival-guide", label: "🧭 Survival Guide" },
   { to: "/mentors", label: "🧑‍🏫 Find a Mentor" },

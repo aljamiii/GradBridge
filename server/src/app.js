@@ -16,6 +16,7 @@ import survivalRoutes from "./routes/survival.routes.js";
 import forumRoutes from "./routes/forum.routes.js";
 import toolsRoutes from "./routes/tools.routes.js";
 import scholarshipRoutes from "./routes/scholarship.routes.js";
+import successPathRoutes from "./routes/successPath.routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 
 const app = express();
@@ -39,6 +40,7 @@ app.use("/api/survival-guide", survivalRoutes);
 app.use("/api/forum", forumRoutes);
 app.use("/api/tools", toolsRoutes);
 app.use("/api/scholarships", scholarshipRoutes);
+app.use("/api/success-path", successPathRoutes);
 
 // --- Error handling (must be registered last) ---
 app.use(errorHandler);

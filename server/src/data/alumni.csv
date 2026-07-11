@@ -1,0 +1,51 @@
+year,field,cgpa,ielts,country,university,program,funding,outcome
+2024,Computer Science,3.92,7.5,United States,Carnegie Mellon University,MS in CS,full,admitted
+2024,Computer Science,3.85,7.0,Canada,University of Toronto,MSc CS,full,admitted
+2024,Computer Science,3.78,7.0,Canada,University of Waterloo,MMath CS,partial,admitted
+2024,Computer Science,3.71,6.5,Germany,TU Munich,MSc Informatics,self,admitted
+2024,Computer Science,3.65,7.0,Canada,University of Toronto,MSc CS,none,rejected
+2024,Computer Science,3.55,6.5,United Kingdom,University of Manchester,MSc ACS,partial,admitted
+2024,Computer Science,3.45,7.0,Germany,TU Berlin,MSc CS,self,admitted
+2024,Computer Science,3.40,6.5,Canada,University of Alberta,MSc CS,none,rejected
+2024,Computer Science,3.30,6.0,Malaysia,University of Malaya,MCS,self,admitted
+2024,Computer Science,3.10,6.5,Malaysia,Taylor's University,MSc CS,partial,admitted
+2024,Computer Science,3.05,6.0,United Kingdom,Imperial College London,MSc Computing,none,rejected
+2024,Computer Science,2.95,6.0,Germany,RWTH Aachen,MSc CS,none,rejected
+2025,Computer Science,3.95,8.0,United States,Stanford University,MS CS,full,admitted
+2025,Computer Science,3.88,7.5,Sweden,KTH Royal Institute,MSc ML,full,admitted
+2025,Computer Science,3.72,7.0,Australia,University of Melbourne,MIT,partial,admitted
+2025,Computer Science,3.60,6.5,Sweden,KTH Royal Institute,MSc CS,none,rejected
+2025,Computer Science,3.50,7.0,Australia,Monash University,MIT,partial,admitted
+2025,Computer Science,3.35,6.5,Malaysia,APU,MSc CS,self,admitted
+2025,Computer Science,3.20,6.0,Canada,University of Toronto,MSc CS,none,rejected
+2025,Computer Science,3.15,6.5,Germany,University of Stuttgart,MSc INFOTECH,none,rejected
+2024,Electrical Engineering,3.80,7.0,Canada,UBC,MASc EE,full,admitted
+2024,Electrical Engineering,3.66,6.5,Germany,TU Munich,MSc EE,self,admitted
+2024,Electrical Engineering,3.50,6.5,Australia,UNSW,ME EE,partial,admitted
+2024,Electrical Engineering,3.42,6.0,Canada,University of Calgary,MEng EE,none,rejected
+2024,Electrical Engineering,3.25,6.5,Malaysia,UTM,MEng EE,self,admitted
+2024,Electrical Engineering,3.05,6.0,United Kingdom,University of Sheffield,MSc EE,none,rejected
+2025,Electrical Engineering,3.90,7.5,United States,Georgia Tech,MS ECE,full,admitted
+2025,Electrical Engineering,3.70,7.0,Sweden,Chalmers,MSc EE,partial,admitted
+2025,Electrical Engineering,3.48,6.5,Germany,TU Darmstadt,MSc EE,self,admitted
+2025,Electrical Engineering,3.30,6.0,Australia,RMIT,ME EE,none,rejected
+2024,Business Administration,3.75,7.0,United Kingdom,University of Manchester,MBA,partial,admitted
+2024,Business Administration,3.58,6.5,Australia,University of Sydney,MCom,self,admitted
+2024,Business Administration,3.40,6.5,Malaysia,Sunway University,MBA,partial,admitted
+2024,Business Administration,3.22,6.0,United Kingdom,University of Birmingham,MSc Mgmt,none,rejected
+2025,Business Administration,3.82,7.5,Canada,Queen's University,MIB,full,admitted
+2025,Business Administration,3.45,6.5,Malaysia,University of Malaya,MBA,self,admitted
+2025,Business Administration,3.28,6.0,Australia,Deakin University,MBA,none,rejected
+2024,Public Health,3.70,7.0,Australia,Monash University,MPH,partial,admitted
+2024,Public Health,3.52,6.5,United Kingdom,University of Glasgow,MPH,partial,admitted
+2024,Public Health,3.35,6.5,Sweden,Lund University,MPH,none,rejected
+2025,Public Health,3.85,7.5,Canada,McGill University,MScPH,full,admitted
+2025,Public Health,3.60,7.0,Australia,University of Melbourne,MPH,partial,admitted
+2025,Public Health,3.30,6.0,Malaysia,UKM,MPH,self,admitted
+2024,Mechanical Engineering,3.77,7.0,Germany,RWTH Aachen,MSc ME,self,admitted
+2024,Mechanical Engineering,3.55,6.5,Canada,McMaster University,MASc ME,partial,admitted
+2024,Mechanical Engineering,3.38,6.0,Germany,TU Berlin,MSc ME,none,rejected
+2025,Mechanical Engineering,3.86,7.0,United States,Purdue University,MS ME,full,admitted
+2025,Mechanical Engineering,3.62,6.5,Sweden,KTH Royal Institute,MSc ME,partial,admitted
+2025,Mechanical Engineering,3.25,6.0,Australia,UNSW,ME ME,none,rejected
+2025,Mechanical Engineering,3.48,6.5,Malaysia,UTM,MEng ME,self,admitted
