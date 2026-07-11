@@ -48,6 +48,7 @@ const TOOLS_ITEMS = [
   { to: "/compatibility", label: "🧩 Compatibility Score" },
   { to: "/financial-risk", label: "📉 Risk & Savings" },
   { to: "/visa-checklist", label: "🛂 Visa Checklist" },
+  { to: "/job-pr", label: "💼 Jobs & PR Points" },
 ];
 
 export default function Navbar() {

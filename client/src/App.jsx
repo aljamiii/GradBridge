@@ -25,6 +25,7 @@ import VisaChecklist from "./pages/VisaChecklist";
 import Scholarships from "./pages/Scholarships";
 import AdminScholarships from "./pages/AdminScholarships";
 import SuccessPath from "./pages/SuccessPath";
+import JobMarketPR from "./pages/JobMarketPR";
 
 export default function App() {
   return (
@@ -167,6 +168,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={["student", "mentor"]}>
               <SuccessPath />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/job-pr"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <JobMarketPR />
             </ProtectedRoute>
           }
         />

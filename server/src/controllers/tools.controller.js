@@ -143,3 +143,58 @@ export const analyzeFinancialRisk = async (req, res, next) => {
     next(err);
   }
 };
+
+// ---------- Job Market & PR Points Calculator ----------
+import { getJobStats, adzunaConfigured, ADZUNA_COUNTRIES } from "../services/adzuna.js";
+import { canadaCRS, australiaPoints } from "../services/prPoints.js";
+
+// GET /api/tools/job-market?country=Canada&field=software engineer
+export const getJobMarket = async (req, res, next) => {
+  try {
+    if (!adzunaConfigured()) {
+      return res.status(503).json({
+        success: false,
+        message: "Job data isn't configured yet — add free ADZUNA_APP_ID and ADZUNA_APP_KEY to server/.env (developer.adzuna.com).",
+      });
+    }
+    const country = (req.query.country || "").trim();
+    const field = (req.query.field || "").trim();
+    if (!country || !field) {
+      return res.status(400).json({ success: false, message: "Provide a country and a field." });
+    }
+    const stats = await getJobStats(country, field);
+    res.json({ success: true, country, field, ...stats, source: "Adzuna (live)" });
+  } catch (err) {
+    if (err.statusCode === 400) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    next(err);
+  }
+};
+
+// GET /api/tools/job-market/countries — which countries the job data covers
+export const getJobMarketCountries = (req, res) => {
+  res.json({ success: true, countries: Object.keys(ADZUNA_COUNTRIES) });
+};
+
+// POST /api/tools/pr-points  body: { age, education, yearsExperience, ielts }
+export const computePRPoints = (req, res) => {
+  const age = Math.round(Number(req.body.age));
+  const yearsExperience = Math.max(0, Number(req.body.yearsExperience) || 0);
+  const ielts = Number(req.body.ielts) || 0;
+  const education = ["highschool", "bachelors", "masters", "phd"].includes(req.body.education)
+    ? req.body.education
+    : "bachelors";
+
+  if (!Number.isFinite(age) || age < 16 || age > 60) {
+    return res.status(400).json({ success: false, message: "Enter a valid age (16-60)." });
+  }
+
+  const input = { age, education, yearsExperience, ielts };
+  res.json({
+    success: true,
+    input,
+    pathways: [canadaCRS(input), australiaPoints(input)],
+    note: "Simplified estimates of the official points systems — always confirm on the official immigration sites.",
+  });
+};
