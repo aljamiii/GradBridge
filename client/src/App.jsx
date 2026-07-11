@@ -16,6 +16,7 @@ import Mentors from "./pages/Mentors";
 import Bookings from "./pages/Bookings";
 import Chat from "./pages/Chat";
 import NetworkMap from "./pages/NetworkMap";
+import SurvivalGuide from "./pages/SurvivalGuide";
 
 export default function App() {
   return (
@@ -94,6 +95,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={["student"]}>
               <NetworkMap />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/survival-guide"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <SurvivalGuide />
             </ProtectedRoute>
           }
         />

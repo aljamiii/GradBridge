@@ -12,6 +12,7 @@ import aiRoutes from "./routes/ai.routes.js";
 import mentorRoutes from "./routes/mentor.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import chatRoutes from "./routes/chat.routes.js";
+import survivalRoutes from "./routes/survival.routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 
 const app = express();
@@ -31,6 +32,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/mentors", mentorRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/survival-guide", survivalRoutes);
 
 // --- Error handling (must be registered last) ---
 app.use(errorHandler);
