@@ -19,6 +19,9 @@ import NetworkMap from "./pages/NetworkMap";
 import SurvivalGuide from "./pages/SurvivalGuide";
 import Forum from "./pages/Forum";
 import ForumInsights from "./pages/ForumInsights";
+import Compatibility from "./pages/Compatibility";
+import FinancialRisk from "./pages/FinancialRisk";
+import VisaChecklist from "./pages/VisaChecklist";
 
 export default function App() {
   return (
@@ -121,6 +124,30 @@ export default function App() {
           element={
             <ProtectedRoute roles={["student", "mentor"]}>
               <ForumInsights />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/compatibility"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <Compatibility />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/financial-risk"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <FinancialRisk />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/visa-checklist"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <VisaChecklist />
             </ProtectedRoute>
           }
         />

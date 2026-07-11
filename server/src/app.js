@@ -14,6 +14,7 @@ import bookingRoutes from "./routes/booking.routes.js";
 import chatRoutes from "./routes/chat.routes.js";
 import survivalRoutes from "./routes/survival.routes.js";
 import forumRoutes from "./routes/forum.routes.js";
+import toolsRoutes from "./routes/tools.routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 
 const app = express();
@@ -35,6 +36,7 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/survival-guide", survivalRoutes);
 app.use("/api/forum", forumRoutes);
+app.use("/api/tools", toolsRoutes);
 
 // --- Error handling (must be registered last) ---
 app.use(errorHandler);

@@ -330,3 +330,86 @@ STUDENT'S QUESTION: ${question}`;
     next(err);
   }
 };
+
+// ---------- AI Visa & Document Checklist Generator ----------
+// Spec (Module 2 #4): personalized checklist from nationality (Bangladeshi),
+// target country, and program type + reminder draft content.
+
+const visaCache = new Map();
+const VISA_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // visa rules change slowly
+
+const visaSchema = {
+  type: "object",
+  properties: {
+    visaType: { type: "string", description: "official visa name, e.g. Canada Study Permit (SDS)" },
+    processingTimeWeeks: { type: "string", description: "typical range, e.g. '4-8'" },
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          document: { type: "string" },
+          category: {
+            type: "string",
+            enum: ["identity", "academic", "financial", "medical", "visa-forms"],
+          },
+          details: { type: "string", description: "one sentence: what exactly, from where" },
+          urgency: {
+            type: "string",
+            enum: ["start-now", "before-applying", "after-admission"],
+            description: "start-now = takes weeks (police clearance, IELTS); after-admission = needs the offer letter",
+          },
+        },
+        required: ["document", "category", "details", "urgency"],
+      },
+    },
+    reminderDraft: {
+      type: "string",
+      description: "a short friendly reminder message we can email the student as deadlines approach",
+    },
+    tips: { type: "array", items: { type: "string" }, description: "2-3 Bangladesh-specific tips" },
+  },
+  required: ["visaType", "processingTimeWeeks", "items", "reminderDraft", "tips"],
+};
+
+// POST /api/ai/visa-checklist   body: { country, degreeLevel }
+export const generateVisaChecklist = async (req, res, next) => {
+  try {
+    const country = (req.body.country || "").trim();
+    const degreeLevel = ["Masters", "PhD"].includes(req.body.degreeLevel)
+      ? req.body.degreeLevel
+      : "Masters";
+    if (!country) {
+      return res.status(400).json({ success: false, message: "Please provide a target country." });
+    }
+
+    const key = `${country}|${degreeLevel}`.toLowerCase();
+    const hit = visaCache.get(key);
+    if (hit && hit.expires > Date.now()) {
+      return res.json({ success: true, cached: true, ...hit.data });
+    }
+
+    const prompt = `You are a study-visa advisor for BANGLADESHI students.
+
+Build the complete document checklist for a Bangladeshi citizen applying for a
+student visa to study a ${degreeLevel} in ${country}.
+
+Rules:
+- Use the correct current visa name and typical processing time for Bangladeshi applicants.
+- Include Bangladesh-specific documents where relevant (police clearance from
+  Bangladesh Police, notarized bank solvency certificates, sponsor affidavits).
+- urgency "start-now" for anything that takes weeks to obtain in Bangladesh.
+- reminderDraft: a short, friendly reminder message (2-3 sentences) addressed to
+  the student about upcoming deadlines, with a placeholder {DEADLINE_DATE}.
+- tips: practical, Bangladesh-specific (embassy/VFS location, common rejection reasons).`;
+
+    const checklist = await generateJSON(prompt, visaSchema);
+
+    const data = { input: { country, degreeLevel, nationality: "Bangladeshi" }, ...checklist };
+    visaCache.set(key, { data, expires: Date.now() + VISA_CACHE_TTL_MS });
+
+    res.json({ success: true, cached: false, ...data });
+  } catch (err) {
+    next(err);
+  }
+};

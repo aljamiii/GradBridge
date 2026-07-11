@@ -6,6 +6,48 @@ import { getSocket, disconnectSocket } from "../lib/socket";
 
 const linkClass = "text-sm font-medium text-slate-700 hover:text-indigo-600";
 
+// A small dropdown menu: click to open, click anywhere else to close.
+function Menu({ label, items }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(!open)} className={`${linkClass} flex items-center gap-1`}>
+        {label} <span className="text-xs">▾</span>
+      </button>
+      {open && (
+        <>
+          {/* invisible backdrop: any outside click closes the menu */}
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-8 z-20 w-52 rounded-xl border border-slate-200 bg-white py-2 shadow-lg">
+            {items.map((item) => (
+              <Link key={item.to} to={item.to} onClick={() => setOpen(false)}
+                className="block px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+const EXPLORE_ITEMS = [
+  { to: "/universities", label: "🎓 Universities" },
+  { to: "/network-map", label: "🗺️ Network Map" },
+  { to: "/survival-guide", label: "🧭 Survival Guide" },
+  { to: "/mentors", label: "🧑‍🏫 Find a Mentor" },
+];
+
+const TOOLS_ITEMS = [
+  { to: "/cost-predictor", label: "💰 Cost Predictor" },
+  { to: "/eligibility", label: "🎯 Eligibility Check" },
+  { to: "/destination-advisor", label: "🌍 Destination Advisor" },
+  { to: "/compatibility", label: "🧩 Compatibility Score" },
+  { to: "/financial-risk", label: "📉 Risk & Savings" },
+  { to: "/visa-checklist", label: "🛂 Visa Checklist" },
+];
+
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -17,7 +59,6 @@ export default function Navbar() {
       .catch(() => {});
   }, []);
 
-  // Live unread badge: initial fetch + refresh on any inbox change.
   useEffect(() => {
     if (!user || user.role === "admin") return;
     refreshUnread();
@@ -44,13 +85,8 @@ export default function Navbar() {
             <Link to="/dashboard" className={linkClass}>Dashboard</Link>
             {user.role === "student" && (
               <>
-                <Link to="/universities" className={linkClass}>Universities</Link>
-                <Link to="/cost-predictor" className={linkClass}>Costs</Link>
-                <Link to="/eligibility" className={linkClass}>Eligibility</Link>
-                <Link to="/destination-advisor" className={linkClass}>Advisor</Link>
-                <Link to="/mentors" className={linkClass}>Mentors</Link>
-                <Link to="/network-map" className={linkClass}>Network</Link>
-                <Link to="/survival-guide" className={linkClass}>Survival</Link>
+                <Menu label="Explore" items={EXPLORE_ITEMS} />
+                <Menu label="Tools" items={TOOLS_ITEMS} />
               </>
             )}
             {(user.role === "student" || user.role === "mentor") && (
