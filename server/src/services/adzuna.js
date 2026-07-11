@@ -30,12 +30,13 @@ export async function getJobStats(country, field) {
   const hit = cache.get(key);
   if (hit && hit.expires > Date.now()) return hit.data;
 
+  // Note: Adzuna rejects requests containing unknown parameters (400),
+  // so send exactly what its docs list.
   const params = new URLSearchParams({
     app_id: process.env.ADZUNA_APP_ID,
     app_key: process.env.ADZUNA_APP_KEY,
     what: field,
     results_per_page: "5",
-    content_type: "application/json",
   });
   const res = await fetch(
     `https://api.adzuna.com/v1/api/jobs/${cc}/search/1?${params}`,
@@ -44,13 +45,9 @@ export async function getJobStats(country, field) {
   if (!res.ok) throw new Error(`Adzuna responded ${res.status}`);
   const raw = await res.json();
 
-  // Average advertised salary from the returned sample (mean of min+max/2).
-  const salaries = (raw.results ?? [])
-    .map((j) => (j.salary_min && j.salary_max ? (j.salary_min + j.salary_max) / 2 : j.salary_min))
-    .filter(Boolean);
-  const avgSalary = salaries.length
-    ? Math.round(salaries.reduce((a, b) => a + b, 0) / salaries.length)
-    : null;
+  // Adzuna returns "mean" — the average advertised salary for the whole
+  // query, far better than averaging our 5-result sample.
+  const avgSalary = raw.mean ? Math.round(raw.mean) : null;
 
   const data = {
     count: raw.count ?? 0,
