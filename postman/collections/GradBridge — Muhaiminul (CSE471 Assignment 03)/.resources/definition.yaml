@@ -1,0 +1,14 @@
+$kind: collection
+description: "Feature A: Mentor Matcher & Booking. Feature B: Community Forum & Insights. Server runs on port 1384 (last 4 digits of student ID). Run '0. Login' first — it auto-saves the JWT into the {{token}} collection variable; the mentor/post/booking id requests auto-capture ids too, so you can Send top-to-bottom."
+variables:
+  baseUrl: http://localhost:1384
+  token: ""
+  mentorId: ""
+  bookingId: ""
+  conversationId: ""
+auth:
+  - id: a77ffd1f-ea80-4f86-8f31-39a42547ce7d
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{token}}"

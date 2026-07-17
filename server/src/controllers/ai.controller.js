@@ -231,7 +231,8 @@ Rules:
 //
 // The RAG loop:
 //   1. EMBED the question into a vector
-//   2. RETRIEVE the most similar knowledge chunks (cosine similarity)
+//   2. RETRIEVE the most similar knowledge chunks — Atlas Vector Search
+//      ($vectorSearch), with an in-memory cosine scan as automatic fallback
 //   3. AUGMENT the prompt with those chunks + live weather
 //   4. GENERATE an answer grounded ONLY in that context
 
@@ -246,9 +247,8 @@ const cosine = (a, b) => {
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 };
 
-// The knowledge base is small (~24 chunks), so we keep it in memory and
-// compare in-app instead of configuring Atlas Vector Search. Reload every
-// 10 minutes so a re-seed is picked up without restarting.
+// FALLBACK path only: keep all chunks in memory and compare in-app.
+// Reload every 10 minutes so a re-seed is picked up without restarting.
 let chunkCache = null;
 let chunkCacheExpires = 0;
 const loadChunks = async () => {
@@ -259,7 +259,57 @@ const loadChunks = async () => {
 };
 
 const TOP_K = 4;             // how many chunks to hand to Gemini
-const MIN_SIMILARITY = 0.45; // below this, a chunk is probably irrelevant
+const MIN_SIMILARITY = 0.45; // raw cosine — below this, a chunk is probably irrelevant
+const VECTOR_INDEX = "knowledge_vector_index"; // created by scripts/createVectorIndex.js
+
+// Retrieval has two paths:
+//   PRIMARY  — Atlas Vector Search: the DB's own vector index finds the nearest
+//              chunks, like any other indexed query. Scales past a for-loop.
+//   FALLBACK — the original in-memory cosine scan, used automatically when the
+//              index doesn't exist yet or we're on non-Atlas MongoDB, so the
+//              feature never breaks (fail-soft, same pattern as weather).
+// Returns { scored, retrieval } — `retrieval` names the path that ran.
+const retrieveChunks = async (qVector) => {
+  try {
+    const results = await KnowledgeChunk.aggregate([
+      {
+        $vectorSearch: {
+          index: VECTOR_INDEX,
+          path: "embedding",
+          queryVector: qVector,
+          numCandidates: 100, // entries considered before ranking (>= limit)
+          limit: TOP_K,
+        },
+      },
+      { $project: { city: 1, country: 1, topic: 1, text: 1, score: { $meta: "vectorSearchScore" } } },
+    ]);
+    if (results.length > 0) {
+      return {
+        // Atlas reports cosine normalized to (1 + cos) / 2 — convert back to
+        // raw cosine so the 0.45 threshold and the similarity % shown in the
+        // UI mean exactly what they did before.
+        scored: results
+          .map((c) => ({ ...c, score: c.score * 2 - 1 }))
+          .filter((c) => c.score >= MIN_SIMILARITY),
+        retrieval: "atlas-vector-search",
+      };
+    }
+    // Zero results usually means the index doesn't exist — $vectorSearch
+    // returns nothing (not an error) for a missing index → fall through.
+  } catch {
+    // Non-Atlas MongoDB rejects the $vectorSearch stage → fall through.
+  }
+
+  const chunks = await loadChunks();
+  return {
+    scored: chunks
+      .map((c) => ({ ...c, score: cosine(qVector, c.embedding) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, TOP_K)
+      .filter((c) => c.score >= MIN_SIMILARITY),
+    retrieval: "in-memory-cosine",
+  };
+};
 
 // POST /api/ai/destination-advisor   body: { question }
 export const askDestinationAdvisor = async (req, res, next) => {
@@ -269,23 +319,18 @@ export const askDestinationAdvisor = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Please ask a full question." });
     }
 
-    const chunks = await loadChunks();
-    if (chunks.length === 0) {
+    // 1. EMBED the question
+    const qVector = await embedText(question);
+
+    // 2. RETRIEVE top-K most similar chunks (vector index, or in-memory fallback)
+    const { scored, retrieval } = await retrieveChunks(qVector);
+
+    if (scored.length === 0 && (await KnowledgeChunk.estimatedDocumentCount()) === 0) {
       return res.status(503).json({
         success: false,
         message: "Knowledge base is empty — run: node src/scripts/seedKnowledge.js",
       });
     }
-
-    // 1. EMBED the question
-    const qVector = await embedText(question);
-
-    // 2. RETRIEVE top-K most similar chunks
-    const scored = chunks
-      .map((c) => ({ ...c, score: cosine(qVector, c.embedding) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, TOP_K)
-      .filter((c) => c.score >= MIN_SIMILARITY);
 
     // 3. AUGMENT: live weather for the city the best chunks are about
     const topCity = scored[0] ? { city: scored[0].city, country: scored[0].country } : null;
@@ -318,6 +363,7 @@ STUDENT'S QUESTION: ${question}`;
     res.json({
       success: true,
       answer,
+      retrieval, // "atlas-vector-search" or "in-memory-cosine" — proof of path
       sources: scored.map((c) => ({
         city: c.city,
         country: c.country,

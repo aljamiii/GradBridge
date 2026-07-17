@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/chat/unread-count"
+method: GET
+order: 8000

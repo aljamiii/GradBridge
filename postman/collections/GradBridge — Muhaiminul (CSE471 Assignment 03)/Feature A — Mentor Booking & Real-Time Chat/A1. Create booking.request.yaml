@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "mentorId": "{{mentorId}}",
+      "start": "2026-08-01T10:00:00Z",
+      "durationMins": 30,
+      "topic": "PhD supervision guidance"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const j = pm.response.json();
+      if (j.booking && j.booking._id) { pm.collectionVariables.set('bookingId', j.booking._id); console.log('bookingId saved:', j.booking._id); }
+    language: text/javascript
+order: 2000

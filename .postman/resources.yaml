@@ -1,0 +1,13 @@
+# Use this workspace to collaborate
+workspace:
+  id: 7db32421-f3e3-4747-877a-1e30dfb0bac9
+
+localResources:
+  collections:
+    - ../submission/GradBridge-Muhaiminul.postman_collection.json
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../postman/collections/GradBridge — Muhaiminul (CSE471 Assignment 03): 2a25b9e3-e99e-47f7-92d2-38e2057c394d

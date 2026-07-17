@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/api/chat/start"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "userId": "{{mentorId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const j = pm.response.json();
+      if (j.conversationId) { pm.collectionVariables.set('conversationId', j.conversationId); console.log('conversationId saved:', j.conversationId); }
+    language: text/javascript
+order: 5000

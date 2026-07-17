@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/bookings"
+method: GET
+order: 3000
