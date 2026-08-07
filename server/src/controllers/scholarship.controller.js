@@ -64,6 +64,51 @@ export const setScholarshipStatus = async (req, res, next) => {
   }
 };
 
+export const updateScholarship = async (req, res, next) => {
+  try {
+    const allowedFields = [
+      "title",
+      "provider",
+      "country",
+      "deadline",
+      "fundingType",
+      "eligibility",
+      "link",
+    ];
+
+    const updates = {};
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    const scholarship = await Scholarship.findByIdAndUpdate(
+      req.params.id,
+      updates,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!scholarship) {
+      return res.status(404).json({
+        success: false,
+        message: "Scholarship not found.",
+      });
+    }
+
+    res.json({
+      success: true,
+      scholarship,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // POST /api/admin/scholarships/scrape — run the pipeline right now.
 export const triggerScrape = async (req, res, next) => {
   let scrapeRun;

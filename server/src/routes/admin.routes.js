@@ -6,6 +6,7 @@ import {
   setScholarshipStatus,
   triggerScrape,
   getAggregatorDashboard,
+  updateScholarship,
 } from "../controllers/scholarship.controller.js";
 import { protect, authorize } from "../middleware/auth.js";
 
@@ -22,6 +23,10 @@ router.get(
 );  
 router.get("/scholarships", adminListScholarships);  
         // review queue
+router.put(
+  "/scholarships/:id",
+  updateScholarship
+);
 router.put("/scholarships/:id/status", setScholarshipStatus); // approve/reject
 router.post("/scholarships/scrape", triggerScrape); 
        // run pipeline now

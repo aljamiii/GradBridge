@@ -79,25 +79,25 @@ export default function AggregatorDashboard() {
 
         <div className="flex flex-wrap items-center justify-between gap-4">
 
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">
-              Aggregator Dashboard
-            </h1>
+            <div>
+                <h1 className="text-3xl font-bold text-slate-900">
+                Aggregator Dashboard
+                </h1>
 
-            <p className="mt-1 text-slate-500">
-              Monitor scholarship and graduate program aggregation
-            </p>
-          </div>
+                <p className="mt-1 text-slate-500">
+                Scholarship & Program Aggregation System
+                </p>
+            </div>
 
-          <button
-            onClick={runAggregator}
-            disabled={scraping}
-            className="rounded-xl bg-indigo-600 px-5 py-3 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {scraping
-              ? "Running Aggregator..."
-              : "Run Aggregator Now"}
-          </button>
+            <button
+                onClick={runAggregator}
+                disabled={scraping}
+                className="rounded-xl bg-indigo-600 px-5 py-3 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+                {scraping
+                ? "Running Aggregator..."
+                : "Run Aggregator Now"}
+            </button>
 
         </div>
 

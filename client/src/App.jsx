@@ -27,7 +27,6 @@ import AdminScholarships from "./pages/AdminScholarships";
 import SuccessPath from "./pages/SuccessPath";
 import JobMarketPR from "./pages/JobMarketPR";
 import AggregatorDashboard from "./pages/AggregatorDashboard";
-
 export default function App() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -213,6 +212,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
       </Routes>
     </div>
   );
