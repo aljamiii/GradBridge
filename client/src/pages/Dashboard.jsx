@@ -28,6 +28,7 @@ const roleContent = {
     actions: [
       { to: "/admin/mentors", label: "Review mentor applications →" },
       { to: "/admin/scholarships", label: "Review scraped scholarship data →" },
+      { to: "/admin/aggregator", label: "Open Aggregator Dashboard →" },
     ],
   },
 };

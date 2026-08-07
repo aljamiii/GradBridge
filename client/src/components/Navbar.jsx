@@ -86,6 +86,25 @@ export default function Navbar() {
         {user ? (
           <>
             <Link to="/dashboard" className={linkClass}>Dashboard</Link>
+            {user.role === "admin" && (
+              <Menu
+                label="Admin"
+                items={[
+                  {
+                    to: "/admin/aggregator",
+                    label: "📊 Aggregator Dashboard",
+                  },
+                  {
+                    to: "/admin/scholarships",
+                    label: "🚩 AI Scholarship Review",
+                  },
+                  {
+                    to: "/admin/mentors",
+                    label: "🧑‍🏫 Mentor Applications",
+                  },
+                ]}
+              />
+            )}
             {user.role === "student" && (
               <>
                 <Menu label="Explore" items={EXPLORE_ITEMS} />

@@ -1,5 +1,6 @@
 // CONTROLLER: scholarships — student browsing + admin review + scrape trigger.
 import Scholarship from "../models/Scholarship.js";
+import ScrapeRun from "../models/ScrapeRun.js";
 import { runScraper } from "../services/scraper.js";
 
 // GET /api/scholarships?country=&fundingType=&q=   (students see APPROVED only)
@@ -65,9 +66,112 @@ export const setScholarshipStatus = async (req, res, next) => {
 
 // POST /api/admin/scholarships/scrape — run the pipeline right now.
 export const triggerScrape = async (req, res, next) => {
+  let scrapeRun;
+
   try {
+    scrapeRun = await ScrapeRun.create({
+      status: "running",
+      trigger: "manual",
+      startedAt: new Date(),
+    });
+
     const report = await runScraper();
-    res.json({ success: true, report });
+
+    const totalFound = report.reduce(
+      (sum, item) => sum + item.found,
+      0
+    );
+
+    const totalAdded = report.reduce(
+      (sum, item) => sum + item.added,
+      0
+    );
+
+    const totalDuplicates = report.reduce(
+      (sum, item) => sum + item.duplicates,
+      0
+    );
+
+    const totalFlagged = report.reduce(
+      (sum, item) => sum + item.flagged,
+      0
+    );
+
+    scrapeRun.status = "completed";
+    scrapeRun.completedAt = new Date();
+    scrapeRun.results = report;
+    scrapeRun.totalFound = totalFound;
+    scrapeRun.totalAdded = totalAdded;
+    scrapeRun.totalDuplicates = totalDuplicates;
+    scrapeRun.totalFlagged = totalFlagged;
+
+    await scrapeRun.save();
+
+    res.json({
+      success: true,
+      report,
+      scrapeRun,
+    });
+  } catch (err) {
+    if (scrapeRun) {
+      scrapeRun.status = "failed";
+      scrapeRun.completedAt = new Date();
+      scrapeRun.errorMessage = err.message;
+
+      await scrapeRun.save();
+    }
+
+    next(err);
+  }
+};
+
+export const getAggregatorDashboard = async (req, res, next) => {
+  try {
+    const totalPrograms = await Scholarship.countDocuments();
+
+    const approved = await Scholarship.countDocuments({
+      status: "approved",
+    });
+
+    const pending = await Scholarship.countDocuments({
+      status: "pending",
+    });
+
+    const rejected = await Scholarship.countDocuments({
+      status: "rejected",
+    });
+
+    const outdated = await Scholarship.countDocuments({
+      likelyOutdated: true,
+    });
+
+    const lowConfidence = await Scholarship.countDocuments({
+      aiConfidence: "low",
+    });
+
+    const recentScholarships = await Scholarship.find()
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    const latestRun = await ScrapeRun.findOne()
+      .sort({ startedAt: -1 });
+
+    res.json({
+      success: true,
+
+      stats: {
+        totalPrograms,
+        approved,
+        pending,
+        rejected,
+        outdated,
+        lowConfidence,
+      },
+
+      latestRun,
+
+      recentScholarships,
+    });
   } catch (err) {
     next(err);
   }
