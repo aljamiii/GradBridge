@@ -1,63 +1,209 @@
-import { useEffect, useState } from "react";
-
-// A small status chip: green when good, amber when waiting/missing.
-function StatusChip({ ok, okText, badText }) {
-  return (
-    <span
-      className={`rounded-full px-3 py-1 text-sm font-medium ${
-        ok ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-      }`}
-    >
-      {ok ? okText : badText}
-    </span>
-  );
-}
+// App is now just the route table — each page lives in src/pages.
+import { Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Home from "./pages/Home";
+import Register from "./pages/Register";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
+import AdminMentors from "./pages/AdminMentors";
+import Universities from "./pages/Universities";
+import CostPredictor from "./pages/CostPredictor";
+import Eligibility from "./pages/Eligibility";
+import DestinationAdvisor from "./pages/DestinationAdvisor";
+import Mentors from "./pages/Mentors";
+import Bookings from "./pages/Bookings";
+import Chat from "./pages/Chat";
+import NetworkMap from "./pages/NetworkMap";
+import SurvivalGuide from "./pages/SurvivalGuide";
+import Forum from "./pages/Forum";
+import ForumInsights from "./pages/ForumInsights";
+import Compatibility from "./pages/Compatibility";
+import FinancialRisk from "./pages/FinancialRisk";
+import VisaChecklist from "./pages/VisaChecklist";
+import Scholarships from "./pages/Scholarships";
+import AdminScholarships from "./pages/AdminScholarships";
+import SuccessPath from "./pages/SuccessPath";
+import JobMarketPR from "./pages/JobMarketPR";
 
 export default function App() {
-  const [health, setHealth] = useState(null); // API response
-  const [error, setError] = useState(false); // couldn't reach API at all
-
-  useEffect(() => {
-    fetch("/api/health")
-      .then((res) => res.json())
-      .then(setHealth)
-      .catch(() => setError(true));
-  }, []);
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4">
-      <h1 className="text-4xl font-bold text-slate-800">
-        Grad<span className="text-indigo-600">Bridge</span>
-      </h1>
-      <p className="mt-2 max-w-md text-center text-slate-500">
-        AI-Powered Study Abroad Decision &amp; Life Readiness Platform
-      </p>
-
-      <div className="mt-8 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">
-          System Status
-        </h2>
-        <div className="flex items-center justify-between py-2">
-          <span className="text-slate-700">API Server</span>
-          <StatusChip
-            ok={!!health}
-            okText="Running"
-            badText={error ? "Not reachable" : "Checking…"}
-          />
-        </div>
-        <div className="flex items-center justify-between py-2">
-          <span className="text-slate-700">Database</span>
-          <StatusChip
-            ok={health?.database === "connected"}
-            okText="Connected"
-            badText="Not connected"
-          />
-        </div>
-      </div>
-
-      <p className="mt-6 text-xs text-slate-400">
-        Phase 1 · Project Skeleton · MVC
-      </p>
+    <div className="flex min-h-screen flex-col bg-slate-50">
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/mentors"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminMentors />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/universities"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <Universities />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cost-predictor"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <CostPredictor />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/eligibility"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <Eligibility />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/destination-advisor"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <DestinationAdvisor />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mentors"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <Mentors />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/network-map"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <NetworkMap />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/survival-guide"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <SurvivalGuide />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/forum"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <Forum />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/forum/insights"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <ForumInsights />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/compatibility"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <Compatibility />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/financial-risk"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <FinancialRisk />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/visa-checklist"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <VisaChecklist />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/scholarships"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <Scholarships />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/success-path"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <SuccessPath />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/job-pr"
+          element={
+            <ProtectedRoute roles={["student"]}>
+              <JobMarketPR />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/scholarships"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminScholarships />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/bookings"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <Bookings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute roles={["student", "mentor"]}>
+              <Chat />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </div>
   );
 }

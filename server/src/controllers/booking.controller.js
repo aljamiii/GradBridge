@@ -1,0 +1,133 @@
+// CONTROLLER: session booking (spec: booked slots stored in our own DB,
+// with a time-conflict check to prevent double booking).
+import Booking from "../models/Booking.js";
+import User from "../models/User.js";
+import { sendSystemMessage } from "./chat.controller.js";
+
+const MS_PER_MIN = 60 * 1000;
+
+// POST /api/bookings   body: { mentorId, start, durationMins, topic }  (student)
+export const createBooking = async (req, res, next) => {
+  try {
+    const { mentorId, start, durationMins = 30, topic } = req.body;
+
+    const startDate = new Date(start);
+    if (Number.isNaN(startDate.getTime())) {
+      return res.status(400).json({ success: false, message: "Please pick a valid date and time." });
+    }
+    if (startDate < new Date()) {
+      return res.status(400).json({ success: false, message: "That time is in the past." });
+    }
+
+    const mentor = await User.findOne({
+      _id: mentorId,
+      role: "mentor",
+      "mentorProfile.verificationStatus": "approved",
+    });
+    if (!mentor) {
+      return res.status(404).json({ success: false, message: "Mentor not found or not approved." });
+    }
+
+    // --- TIME-CONFLICT CHECK (spec requirement) ---
+    // Overlap rule: existingStart < newEnd AND newStart < existingEnd.
+    // Only active bookings (pending/confirmed) block a slot.
+    const duration = [30, 60].includes(Number(durationMins)) ? Number(durationMins) : 30;
+    const newEnd = new Date(startDate.getTime() + duration * MS_PER_MIN);
+
+    const active = await Booking.find({
+      mentor: mentorId,
+      status: { $in: ["pending", "confirmed"] },
+    });
+    const conflict = active.find((b) => {
+      const bEnd = new Date(b.start.getTime() + b.durationMins * MS_PER_MIN);
+      return b.start < newEnd && startDate < bEnd;
+    });
+    if (conflict) {
+      return res.status(409).json({
+        success: false,
+        message: "That slot is already booked with this mentor — pick a different time.",
+      });
+    }
+
+    const booking = await Booking.create({
+      student: req.user._id,
+      mentor: mentorId,
+      start: startDate,
+      durationMins: duration,
+      topic: topic || "",
+    });
+
+    // Booking request appears in the chat thread too (in-app notification).
+    await sendSystemMessage(
+      req.user._id,
+      mentor._id,
+      `📅 Booking request: ${startDate.toLocaleString()} (${duration} min)${topic ? ` — "${topic}"` : ""}`
+    );
+
+    res.status(201).json({ success: true, booking });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/bookings  — role-aware: students see theirs, mentors see theirs.
+export const listBookings = async (req, res, next) => {
+  try {
+    const filter =
+      req.user.role === "mentor" ? { mentor: req.user._id } : { student: req.user._id };
+
+    const bookings = await Booking.find(filter)
+      .sort({ start: 1 })
+      .populate("student", "name email")
+      .populate("mentor", "name email mentorProfile.university");
+
+    res.json({ success: true, count: bookings.length, bookings });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PUT /api/bookings/:id/status   body: { status }
+// Mentors: confirm/decline their bookings. Students: cancel their own.
+export const setBookingStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+
+    const allowed =
+      req.user.role === "mentor" ? ["confirmed", "declined"] : ["cancelled"];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `As a ${req.user.role} you can only set: ${allowed.join(", ")}.`,
+      });
+    }
+
+    const filter =
+      req.user.role === "mentor"
+        ? { _id: req.params.id, mentor: req.user._id }
+        : { _id: req.params.id, student: req.user._id };
+
+    const booking = await Booking.findOne(filter);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found." });
+    }
+    if (["declined", "cancelled"].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: `Already ${booking.status}.` });
+    }
+
+    booking.status = status;
+    await booking.save();
+
+    // Notify the other side inside the chat thread.
+    const emoji = { confirmed: "✅", declined: "❌", cancelled: "🚫" }[status];
+    await sendSystemMessage(
+      req.user._id,
+      req.user.role === "mentor" ? booking.student : booking.mentor,
+      `${emoji} Session on ${booking.start.toLocaleString()} is now ${status}.`
+    );
+
+    res.json({ success: true, booking });
+  } catch (err) {
+    next(err);
+  }
+};
