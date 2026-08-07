@@ -7,6 +7,10 @@ import {
   triggerScrape,
   getAggregatorDashboard,
   updateScholarship,
+  getDuplicateCandidates,
+  mergeDuplicates,
+  keepBothDuplicates,
+  deleteDuplicate,
 } from "../controllers/scholarship.controller.js";
 import { protect, authorize } from "../middleware/auth.js";
 
@@ -28,6 +32,25 @@ router.put(
   updateScholarship
 );
 router.put("/scholarships/:id/status", setScholarshipStatus); // approve/reject
+router.get(
+  "/scholarships/duplicates",
+  getDuplicateCandidates
+);
+
+router.put(
+  "/scholarships/duplicates/:id/merge",
+  mergeDuplicates
+);
+
+router.put(
+  "/scholarships/duplicates/:id/keep-both",
+  keepBothDuplicates
+);
+
+router.delete(
+  "/scholarships/duplicates/:id",
+  deleteDuplicate
+);
 router.post("/scholarships/scrape", triggerScrape); 
        // run pipeline now
 

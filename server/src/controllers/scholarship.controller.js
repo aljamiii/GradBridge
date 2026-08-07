@@ -2,6 +2,7 @@
 import Scholarship from "../models/Scholarship.js";
 import ScrapeRun from "../models/ScrapeRun.js";
 import { runScraper } from "../services/scraper.js";
+import DuplicateCandidate from "../models/DuplicateCandidate.js";
 
 // GET /api/scholarships?country=&fundingType=&q=   (students see APPROVED only)
 export const listScholarships = async (req, res, next) => {
@@ -24,6 +25,229 @@ export const listScholarships = async (req, res, next) => {
 };
 
 // ---------- Admin (FR #2: monitor scraped data quality) ----------
+
+// GET /api/admin/scholarships/duplicates?status=pending
+export const getDuplicateCandidates = async (req, res, next) => {
+  try {
+    const { status = "pending" } = req.query;
+
+    const filter =
+      status === "all"
+        ? {}
+        : { status };
+
+    const duplicates = await DuplicateCandidate.find(filter)
+      .populate("originalScholarship")
+      .sort({ detectedAt: -1 });
+
+    res.json({
+      success: true,
+      count: duplicates.length,
+      duplicates,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// PUT /api/admin/scholarships/duplicates/:id/merge
+export const mergeDuplicates = async (req, res, next) => {
+  try {
+    const candidate = await DuplicateCandidate.findById(
+      req.params.id
+    ).populate("originalScholarship");
+
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        message: "Duplicate candidate not found.",
+      });
+    }
+
+    if (candidate.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "This duplicate has already been resolved.",
+      });
+    }
+
+    const original = candidate.originalScholarship;
+    const incoming = candidate.candidateData;
+
+    if (!original) {
+      return res.status(404).json({
+        success: false,
+        message: "Original scholarship no longer exists.",
+      });
+    }
+
+    // Fill missing information from the newly scraped record.
+    if (!original.provider && incoming.provider) {
+      original.provider = incoming.provider;
+    }
+
+    if (!original.country && incoming.country) {
+      original.country = incoming.country;
+    }
+
+    if (
+      (!original.degreeLevels ||
+        original.degreeLevels.length === 0) &&
+      incoming.degreeLevels?.length
+    ) {
+      original.degreeLevels = incoming.degreeLevels;
+    }
+
+    if (!original.deadline && incoming.deadline) {
+      original.deadline = incoming.deadline;
+    }
+
+    if (
+      (!original.fundingType ||
+        original.fundingType === "unknown") &&
+      incoming.fundingType
+    ) {
+      original.fundingType = incoming.fundingType;
+    }
+
+    if (!original.eligibility && incoming.eligibility) {
+      original.eligibility = incoming.eligibility;
+    }
+
+    if (!original.link && incoming.link) {
+      original.link = incoming.link;
+    }
+
+    // Improve AI confidence when the new record has better confidence.
+    const confidenceRank = {
+      low: 1,
+      medium: 2,
+      high: 3,
+    };
+
+    if (
+      confidenceRank[incoming.aiConfidence] >
+      confidenceRank[original.aiConfidence]
+    ) {
+      original.aiConfidence = incoming.aiConfidence;
+    }
+
+    original.scrapedAt = new Date();
+
+    await original.save();
+
+    candidate.status = "merged";
+    candidate.resolvedAt = new Date();
+
+    await candidate.save();
+
+    res.json({
+      success: true,
+      message: "Duplicate records merged successfully.",
+      scholarship: original,
+      candidate,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// PUT /api/admin/scholarships/duplicates/:id/keep-both
+export const keepBothDuplicates = async (req, res, next) => {
+  try {
+    const candidate = await DuplicateCandidate.findById(
+      req.params.id
+    );
+
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        message: "Duplicate candidate not found.",
+      });
+    }
+
+    if (candidate.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "This duplicate has already been resolved.",
+      });
+    }
+
+    const incoming = candidate.candidateData;
+
+    const createdScholarship = await Scholarship.create({
+      title: incoming.title,
+      provider: incoming.provider || "",
+      country: incoming.country || "",
+      degreeLevels: incoming.degreeLevels || [],
+      deadline: incoming.deadline || "",
+      fundingType: incoming.fundingType || "unknown",
+      eligibility: incoming.eligibility || "",
+      link: incoming.link || "",
+      source: incoming.source || "Admin Duplicate Review",
+
+      aiConfidence: incoming.aiConfidence || "medium",
+      likelyOutdated: Boolean(incoming.likelyOutdated),
+      flagReason: incoming.flagReason || "",
+
+      status: "approved",
+      scrapedAt: new Date(),
+    });
+
+    candidate.status = "keep_both";
+    candidate.resolvedAt = new Date();
+
+    await candidate.save();
+
+    res.json({
+      success: true,
+      message: "Both scholarship records were kept.",
+      scholarship: createdScholarship,
+      candidate,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// DELETE /api/admin/scholarships/duplicates/:id
+export const deleteDuplicate = async (req, res, next) => {
+  try {
+    const candidate = await DuplicateCandidate.findById(
+      req.params.id
+    );
+
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        message: "Duplicate candidate not found.",
+      });
+    }
+
+    if (candidate.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "This duplicate has already been resolved.",
+      });
+    }
+
+    candidate.status = "deleted";
+    candidate.resolvedAt = new Date();
+
+    await candidate.save();
+
+    res.json({
+      success: true,
+      message: "Duplicate candidate deleted.",
+      candidate,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 // GET /api/admin/scholarships?status=pending|approved|rejected|all
 export const adminListScholarships = async (req, res, next) => {
