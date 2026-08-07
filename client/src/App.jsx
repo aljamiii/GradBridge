@@ -27,6 +27,7 @@ import AdminScholarships from "./pages/AdminScholarships";
 import SuccessPath from "./pages/SuccessPath";
 import JobMarketPR from "./pages/JobMarketPR";
 import AggregatorDashboard from "./pages/AggregatorDashboard";
+import DuplicateResolution from "./pages/DuplicateResolution";
 export default function App() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -209,6 +210,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={["admin"]}>
               <AggregatorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/aggregator/duplicates"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <DuplicateResolution />
             </ProtectedRoute>
           }
         />
