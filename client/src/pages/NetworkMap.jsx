@@ -31,7 +31,7 @@ const pinIcon = (online) =>
   });
 
 // Radius for "click anywhere → who's near that point" (server-side $geoNear).
-const PROBE_RADIUS_KM = 25;
+const PROBE_RADIUS_KM = 100;
 
 // Cluster badge for a city with several students — a circle with the count.
 // `anyOnline` marks a cluster containing at least one connected user.

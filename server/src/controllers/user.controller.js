@@ -114,7 +114,7 @@ export const getNearbyStudents = async (req, res, next) => {
   try {
     const lat = Number(req.query.lat);
     const lng = Number(req.query.lng);
-    const radiusKm = Math.min(50, Number(req.query.radiusKm) || 10);
+    const radiusKm = Math.min(100, Number(req.query.radiusKm) || 10);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       return res.status(400).json({ success: false, message: "lat and lng are required." });
     }
