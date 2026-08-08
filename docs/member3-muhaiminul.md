@@ -52,7 +52,12 @@ degree, and subject.
    so the fan is laid out for where the camera lands), with dashed connector
    legs and a × collapse button. ~40 lines, every one explainable — that's
    why no `leaflet.markercluster`.
-9. **Live presence (Map × Chat):** `socket.js` keeps a `userId → connection
+9. **Country stat chips (my third aggregation):**
+   `GET /api/users/network-map/stats` — `$match` opted-in →
+   `$group` by country with `$sum` and `$addToSet` cities → `$size` →
+   `$sort`. Rendered as clickable flag chips above the map; clicking toggles
+   the country filter (map + sidebar re-zoom via the shared `visible` state).
+10. **Live presence (Map × Chat):** `socket.js` keeps a `userId → connection
    count` Map (count, not boolean — a user can have several tabs). First
    connection broadcasts `presence:update {online:true}`, last disconnect
    broadcasts offline; late joiners fetch the list via `presence:get` (ack).

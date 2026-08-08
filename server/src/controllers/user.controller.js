@@ -106,6 +106,40 @@ export const getNetworkMap = async (req, res, next) => {
   }
 };
 
+// GET /api/users/network-map/stats — students per country, computed by the
+// DB (aggregation pipeline, same philosophy as the forum insights): count
+// plus how many distinct cities, sorted by presence.
+export const getNetworkStats = async (req, res, next) => {
+  try {
+    const countries = await User.aggregate([
+      {
+        $match: {
+          role: "student",
+          "studentProfile.abroad.optIn": true,
+          "studentProfile.abroad.lat": { $ne: null },
+        },
+      },
+      {
+        $group: {
+          _id: "$studentProfile.abroad.country",
+          students: { $sum: 1 },
+          cities: { $addToSet: "$studentProfile.abroad.city" },
+        },
+      },
+      { $project: { _id: 0, country: "$_id", students: 1, cities: { $size: "$cities" } } },
+      { $sort: { students: -1, country: 1 } },
+    ]);
+
+    res.json({
+      success: true,
+      total: countries.reduce((sum, c) => sum + c.students, 0),
+      countries,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/users/network-map/geocode?q=  — resolve a typed place name so the
 // map can fly there and run the radius probe. Proxies Nominatim through the
 // cached geocode service (API pattern: keys/CORS/caching all server-side).

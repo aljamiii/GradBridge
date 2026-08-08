@@ -33,6 +33,15 @@ const pinIcon = (online) =>
 // Radius for "click anywhere → who's near that point" (server-side $geoNear).
 const PROBE_RADIUS_KM = 100;
 
+// Flag emoji for the countries we commonly see; 🌍 for anything else.
+const FLAGS = {
+  Canada: "🇨🇦", "United Kingdom": "🇬🇧", Germany: "🇩🇪", Australia: "🇦🇺",
+  Malaysia: "🇲🇾", Sweden: "🇸🇪", "United States": "🇺🇸", Japan: "🇯🇵",
+  Netherlands: "🇳🇱", Finland: "🇫🇮", Denmark: "🇩🇰", Norway: "🇳🇴",
+  France: "🇫🇷", Italy: "🇮🇹", Ireland: "🇮🇪", "New Zealand": "🇳🇿",
+};
+const flagOf = (country) => FLAGS[country] ?? "🌍";
+
 // Cluster badge for a city with several students — a circle with the count.
 // `anyOnline` marks a cluster containing at least one connected user.
 const clusterIcon = (n, anyOnline) =>
@@ -132,6 +141,12 @@ export default function NetworkMap() {
     api("/api/users/network-map")
       .then((d) => setPins(d.pins))
       .catch((err) => setError(err.message));
+  }, []);
+
+  // Country stats (DB aggregation) → the clickable chips above the map.
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    api("/api/users/network-map/stats").then(setStats).catch(() => {});
   }, []);
 
   // Live presence over the existing chat socket: fetch who's online now,
@@ -411,6 +426,39 @@ export default function NetworkMap() {
         </form>
         {placeErr && <span className="w-full text-xs text-red-500">{placeErr}</span>}
       </div>
+
+      {/* Country chips — computed by a $group aggregation; click = filter + zoom */}
+      {stats?.countries?.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button type="button"
+            onClick={() => { setFilters({ ...filters, country: "all" }); setProbe(null); }}
+            className={`rounded-full border px-3 py-1.5 text-sm transition ${
+              filters.country === "all"
+                ? "border-indigo-600 bg-indigo-600 text-white"
+                : "border-slate-300 bg-white text-slate-600 hover:border-indigo-400"
+            }`}>
+            🌍 All <b>{stats.total}</b>
+          </button>
+          {stats.countries.map((c) => (
+            <button key={c.country} type="button"
+              onClick={() => {
+                setFilters({
+                  ...filters,
+                  country: filters.country === c.country ? "all" : c.country,
+                });
+                setProbe(null); // chips answer "who's THERE" — drop any probe
+              }}
+              title={`${c.cities} cit${c.cities === 1 ? "y" : "ies"}`}
+              className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                filters.country === c.country
+                  ? "border-indigo-600 bg-indigo-600 text-white"
+                  : "border-slate-300 bg-white text-slate-600 hover:border-indigo-400"
+              }`}>
+              {flagOf(c.country)} {c.country} <b>{c.students}</b>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Map + a sidebar of profile cards mirroring the current filters */}
       <div className="mt-4 flex flex-col gap-4 lg:flex-row">
