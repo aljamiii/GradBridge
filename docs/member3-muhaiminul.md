@@ -43,7 +43,14 @@ degree, and subject.
 7. **Radius search:** clicking anywhere on the map draws a 25 km circle and
    asks that same endpoint who's inside it — the sidebar flips to "Near your
    click" with per-student distance badges. One `$geoNear` endpoint, two
-   consumers (Survival Guide cross-link + interactive map probe). `abroad.lat/lng` is mirrored into a GeoJSON `Point`
+   consumers (Survival Guide cross-link + interactive map probe).
+8. **City clustering (hand-rolled, no plugin):** pins are grouped by
+   `city|country`; a multi-student city renders one green count badge.
+   Clicking it flies in and **spider-fans** the members around the city
+   centre (offsets computed with `project`/`unproject` at the *target* zoom,
+   so the fan is laid out for where the camera lands), with dashed connector
+   legs and a × collapse button. ~40 lines, every one explainable — that's
+   why no `leaflet.markercluster`. `abroad.lat/lng` is mirrored into a GeoJSON `Point`
    (`location`, **[lng, lat] order** — the classic gotcha) with a **2dsphere
    index**; a `$geoNear` aggregation (must be the *first* pipeline stage)
    returns opted-in students within the radius, already distance-sorted and
@@ -77,7 +84,8 @@ degree, and subject.
 **Practice modifications:**
 - Easy: change the pin color / make PhD pins a different color.
 - Medium: add a "university" text filter beside the existing three.
-- Hard: cluster pins in the same city with a count badge.
+- Hard: re-layout the spider-fan on every zoom change (like
+  leaflet.markercluster does) instead of fixing it at expand time.
 
 ---
 

@@ -20,6 +20,27 @@ const pinIcon = L.divIcon({
 // Radius for "click anywhere → who's near that point" (server-side $geoNear).
 const PROBE_RADIUS_KM = 25;
 
+// Cluster badge for a city with several students — a circle with the count.
+const clusterIcon = (n) =>
+  L.divIcon({
+    className: "",
+    html: `<div style="width:34px;height:34px;border-radius:50%;background:#16a34a;border:3px solid white;
+      box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;
+      color:white;font-weight:700;font-size:13px">${n}</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+  });
+
+// Small × button shown at the city centre while its cluster is fanned out.
+const collapseIcon = L.divIcon({
+  className: "",
+  html: `<div style="width:20px;height:20px;border-radius:50%;background:#475569;border:2px solid white;
+    box-shadow:0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;
+    color:white;font-size:12px;line-height:1">×</div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+});
+
 // One student profile card in the sidebar. `badge` is optional (e.g. "3.2 km").
 function StudentCard({ s, badge, onClick }) {
   return (
@@ -61,8 +82,12 @@ export default function NetworkMap() {
 
   const mapDivRef = useRef(null);   // the <div> Leaflet renders into
   const mapRef = useRef(null);      // the Leaflet map instance
-  const markersRef = useRef([]);    // current markers, so we can clear them
+  const markersRef = useRef([]);    // every layer we drew (pins, clusters, lines)
+  const markersByIdRef = useRef(new Map()); // student id → their marker
   const probeCircleRef = useRef(null); // the radius-search circle
+
+  // Which city cluster is currently fanned out, as "city|country" (or null).
+  const [expandedCity, setExpandedCity] = useState(null);
 
   // Radius search: clicking the map probes "who's within 25 km of here?"
   // { lat, lng, students? } — students undefined while the query runs.
@@ -154,36 +179,97 @@ export default function NetworkMap() {
     };
 
     markersRef.current.forEach((m) => m.remove());
-    markersRef.current = visible.map((p) =>
-      L.marker([p.lat, p.lng], { icon: pinIcon })
-        .addTo(map)
-        .bindPopup(popupContent(p))
-    );
+    markersRef.current = [];
+    markersByIdRef.current = new Map();
 
-    // Zoom to fit the filtered pins (with a little padding).
-    if (visible.length > 0) {
+    const addStudentPin = (p, latlng) => {
+      const m = L.marker(latlng ?? [p.lat, p.lng], { icon: pinIcon })
+        .addTo(map)
+        .bindPopup(popupContent(p));
+      markersRef.current.push(m);
+      markersByIdRef.current.set(String(p.id), m);
+    };
+
+    // Hand-rolled clustering: group pins by city; several students in one
+    // city render as ONE count badge instead of stacked pins.
+    const groups = new Map();
+    for (const p of visible) {
+      const key = `${p.city}|${p.country}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    }
+
+    for (const [key, members] of groups) {
+      if (members.length === 1) {
+        addStudentPin(members[0]);
+        continue;
+      }
+      const center = [
+        members.reduce((sum, p) => sum + p.lat, 0) / members.length,
+        members.reduce((sum, p) => sum + p.lng, 0) / members.length,
+      ];
+
+      if (expandedCity === key) {
+        // Spider-fan: place members in a circle around the city centre.
+        // project/unproject at the TARGET zoom so the fan is laid out for
+        // where the flyTo lands, not where the camera currently is.
+        const fanZoom = Math.max(map.getZoom(), 8);
+        const cp = map.project(center, fanZoom);
+        members.forEach((p, i) => {
+          const angle = (2 * Math.PI * i) / members.length - Math.PI / 2;
+          const ll = map.unproject(
+            L.point(cp.x + 42 * Math.cos(angle), cp.y + 42 * Math.sin(angle)),
+            fanZoom
+          );
+          const leg = L.polyline([center, ll], {
+            color: "#94a3b8", weight: 1.5, dashArray: "3 3",
+          }).addTo(map);
+          markersRef.current.push(leg);
+          addStudentPin(p, ll);
+        });
+        const collapse = L.marker(center, { icon: collapseIcon })
+          .addTo(map)
+          .on("click", () => setExpandedCity(null));
+        markersRef.current.push(collapse);
+      } else {
+        const cluster = L.marker(center, { icon: clusterIcon(members.length) })
+          .addTo(map)
+          .bindTooltip(`${members[0].city} — ${members.length} students`)
+          .on("click", () => {
+            setExpandedCity(key);
+            map.flyTo(center, Math.max(map.getZoom(), 8), { duration: 0.7 });
+          });
+        markersRef.current.push(cluster);
+      }
+    }
+
+    // Zoom to fit the filtered pins (skip while a cluster is fanned out —
+    // refitting would yank the camera away from the city being inspected).
+    if (visible.length > 0 && !expandedCity) {
       map.fitBounds(
         L.latLngBounds(visible.map((p) => [p.lat, p.lng])).pad(0.3),
         { maxZoom: 6 }
       );
     }
-  }, [visible, navigate]);
+  }, [visible, expandedCity, navigate]);
 
   const countries = [...new Set(pins.map((p) => p.country))].sort();
 
   // Sidebar card → fly the map to that student's pin and open its popup.
-  // markersRef is built from `visible` in the same order, so we find the
-  // marker by id; probe results filtered out of `visible` still fly to coords.
+  // Students hidden inside a cluster (or filtered out) have no marker yet:
+  // expand their city's fan and fly there instead.
   const focusStudent = (s) => {
     const map = mapRef.current;
     if (!map) return;
-    const i = visible.findIndex((v) => String(v.id) === String(s.id));
-    const marker = markersRef.current[i];
+    const marker = markersByIdRef.current.get(String(s.id));
     if (marker) {
       map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 6), { duration: 0.8 });
       marker.openPopup();
-    } else if (s.lat != null) {
-      map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 6), { duration: 0.8 });
+    } else {
+      setExpandedCity(`${s.city}|${s.country}`);
+      if (s.lat != null) {
+        map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 8), { duration: 0.8 });
+      }
     }
   };
 
