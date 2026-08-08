@@ -30,7 +30,7 @@ import AggregatorDashboard from "./pages/AggregatorDashboard";
 import DuplicateResolution from "./pages/DuplicateResolution";
 export default function App() {
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-indigo-50/40">
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
