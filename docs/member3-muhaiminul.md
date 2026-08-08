@@ -50,7 +50,14 @@ degree, and subject.
    centre (offsets computed with `project`/`unproject` at the *target* zoom,
    so the fan is laid out for where the camera lands), with dashed connector
    legs and a × collapse button. ~40 lines, every one explainable — that's
-   why no `leaflet.markercluster`. `abroad.lat/lng` is mirrored into a GeoJSON `Point`
+   why no `leaflet.markercluster`.
+9. **Live presence (Map × Chat):** `socket.js` keeps a `userId → connection
+   count` Map (count, not boolean — a user can have several tabs). First
+   connection broadcasts `presence:update {online:true}`, last disconnect
+   broadcasts offline; late joiners fetch the list via `presence:get` (ack).
+   The map paints a pulsing sky-blue dot on online pins, cluster badges, and
+   sidebar avatars, and re-syncs on socket reconnect. Reuses my chat socket —
+   no new connection, no polling. `abroad.lat/lng` is mirrored into a GeoJSON `Point`
    (`location`, **[lng, lat] order** — the classic gotcha) with a **2dsphere
    index**; a `$geoNear` aggregation (must be the *first* pipeline stage)
    returns opted-in students within the radius, already distance-sorted and

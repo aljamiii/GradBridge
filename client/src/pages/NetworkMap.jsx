@@ -3,30 +3,46 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { api } from "../lib/api";
+import { getSocket } from "../lib/socket";
 
 const selectClass =
   "rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none";
 
+// Pulsing sky-blue dot marking a user who is connected right now.
+const onlineDotHtml = `<span style="position:absolute;top:-5px;right:-7px;width:12px;height:12px">
+    <span class="animate-ping" style="position:absolute;inset:0;border-radius:9999px;background:#38bdf8;opacity:.75"></span>
+    <span style="position:absolute;inset:0;border-radius:9999px;background:#0ea5e9;border:2px solid white"></span>
+  </span>`;
+
 // A small green pin as a divIcon — avoids Leaflet's bundler image issues.
-const pinIcon = L.divIcon({
-  className: "",
-  html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
-    background:#16a34a;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,
-  iconSize: [22, 22],
-  iconAnchor: [11, 22],
-  popupAnchor: [0, -20],
-});
+// `online` adds the live-presence dot.
+const pinIcon = (online) =>
+  L.divIcon({
+    className: "",
+    html: `<div style="position:relative;width:22px;height:22px">
+      <div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+        background:#16a34a;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>
+      ${online ? onlineDotHtml : ""}
+    </div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 22],
+    popupAnchor: [0, -20],
+  });
 
 // Radius for "click anywhere → who's near that point" (server-side $geoNear).
 const PROBE_RADIUS_KM = 25;
 
 // Cluster badge for a city with several students — a circle with the count.
-const clusterIcon = (n) =>
+// `anyOnline` marks a cluster containing at least one connected user.
+const clusterIcon = (n, anyOnline) =>
   L.divIcon({
     className: "",
-    html: `<div style="width:34px;height:34px;border-radius:50%;background:#16a34a;border:3px solid white;
-      box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;
-      color:white;font-weight:700;font-size:13px">${n}</div>`,
+    html: `<div style="position:relative;width:34px;height:34px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#16a34a;border:3px solid white;
+        box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;
+        color:white;font-weight:700;font-size:13px">${n}</div>
+      ${anyOnline ? onlineDotHtml : ""}
+    </div>`,
     iconSize: [34, 34],
     iconAnchor: [17, 17],
   });
@@ -41,14 +57,21 @@ const collapseIcon = L.divIcon({
   iconAnchor: [10, 10],
 });
 
-// One student profile card in the sidebar. `badge` is optional (e.g. "3.2 km").
-function StudentCard({ s, badge, onClick }) {
+// One student profile card in the sidebar. `badge` is optional (e.g. "3.2 km");
+// `online` shows the live-presence dot on the avatar.
+function StudentCard({ s, badge, online, onClick }) {
   return (
     <button type="button" onClick={onClick}
       className="w-full rounded-lg border border-slate-100 bg-slate-50 p-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
       <div className="flex items-center gap-2.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 font-semibold text-white">
+        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 font-semibold text-white">
           {s.name?.[0] ?? "?"}
+          {online && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
+              <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-white bg-sky-500"></span>
+            </span>
+          )}
         </span>
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-slate-800">{s.name}</p>
@@ -98,6 +121,30 @@ export default function NetworkMap() {
     api("/api/users/network-map")
       .then((d) => setPins(d.pins))
       .catch((err) => setError(err.message));
+  }, []);
+
+  // Live presence over the existing chat socket: fetch who's online now,
+  // then keep the set fresh from presence:update broadcasts.
+  const [onlineIds, setOnlineIds] = useState(() => new Set());
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    const refresh = () =>
+      socket.emit("presence:get", (ids) => setOnlineIds(new Set((ids ?? []).map(String))));
+    if (socket.connected) refresh();
+    socket.on("connect", refresh); // initial connect AND reconnects re-sync
+    const onUpdate = ({ userId, online }) =>
+      setOnlineIds((prev) => {
+        const next = new Set(prev);
+        if (online) next.add(String(userId));
+        else next.delete(String(userId));
+        return next;
+      });
+    socket.on("presence:update", onUpdate);
+    return () => {
+      socket.off("presence:update", onUpdate);
+      socket.off("connect", refresh);
+    };
   }, []);
 
   // Create the map once (world view centred between Europe and Asia).
@@ -161,6 +208,7 @@ export default function NetworkMap() {
     const popupContent = (p) => {
       const el = document.createElement("div");
       el.innerHTML = `<strong>${p.name}</strong><br/>
+         ${onlineIds.has(String(p.id)) ? '<span style="color:#0ea5e9;font-weight:600">● online now</span><br/>' : ""}
          ${p.degreeLevel ?? ""} in ${p.subject ?? "—"}<br/>
          🎓 ${p.university ?? "—"}<br/>
          📍 ${p.city}, ${p.country}<br/>`;
@@ -183,7 +231,9 @@ export default function NetworkMap() {
     markersByIdRef.current = new Map();
 
     const addStudentPin = (p, latlng) => {
-      const m = L.marker(latlng ?? [p.lat, p.lng], { icon: pinIcon })
+      const m = L.marker(latlng ?? [p.lat, p.lng], {
+        icon: pinIcon(onlineIds.has(String(p.id))),
+      })
         .addTo(map)
         .bindPopup(popupContent(p));
       markersRef.current.push(m);
@@ -232,7 +282,12 @@ export default function NetworkMap() {
           .on("click", () => setExpandedCity(null));
         markersRef.current.push(collapse);
       } else {
-        const cluster = L.marker(center, { icon: clusterIcon(members.length) })
+        const cluster = L.marker(center, {
+          icon: clusterIcon(
+            members.length,
+            members.some((m) => onlineIds.has(String(m.id)))
+          ),
+        })
           .addTo(map)
           .bindTooltip(`${members[0].city} — ${members.length} students`)
           .on("click", () => {
@@ -251,7 +306,7 @@ export default function NetworkMap() {
         { maxZoom: 6 }
       );
     }
-  }, [visible, expandedCity, navigate]);
+  }, [visible, expandedCity, onlineIds, navigate]);
 
   const countries = [...new Set(pins.map((p) => p.country))].sort();
 
@@ -336,6 +391,7 @@ export default function NetworkMap() {
                   {probe.students.map((s) => (
                     <li key={s.id}>
                       <StudentCard s={s} badge={`${s.distanceKm} km`}
+                        online={onlineIds.has(String(s.id))}
                         onClick={() => focusStudent(s)} />
                     </li>
                   ))}
@@ -348,6 +404,10 @@ export default function NetworkMap() {
                 🎓 Students
                 <span className="ml-auto text-xs font-normal text-slate-400">
                   {visible.length} shown
+                  {(() => {
+                    const n = visible.filter((p) => onlineIds.has(String(p.id))).length;
+                    return n > 0 ? ` · ${n} online` : "";
+                  })()}
                 </span>
               </h2>
               <p className="mt-1 text-xs text-slate-400">
@@ -363,7 +423,8 @@ export default function NetworkMap() {
                 <ul className="mt-3 flex-1 space-y-2 overflow-y-auto">
                   {visible.map((p) => (
                     <li key={p.id}>
-                      <StudentCard s={p} onClick={() => focusStudent(p)} />
+                      <StudentCard s={p} online={onlineIds.has(String(p.id))}
+                        onClick={() => focusStudent(p)} />
                     </li>
                   ))}
                 </ul>

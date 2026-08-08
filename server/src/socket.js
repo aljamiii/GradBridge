@@ -7,6 +7,10 @@ import Conversation from "./models/Conversation.js";
 let io = null;
 export const getIO = () => io;
 
+// Presence: who has at least one live socket right now.
+// userId → open connection count (one user can have several tabs).
+const online = new Map();
+
 export const initSocket = (httpServer) => {
   io = new Server(httpServer, {
     cors: { origin: true }, // dev-friendly; tighten to the real domain on deploy
@@ -27,6 +31,27 @@ export const initSocket = (httpServer) => {
     // Personal room: lets the server ping this user anywhere in the app
     // (unread badges, booking alerts).
     socket.join(`user:${socket.userId}`);
+
+    // --- Presence (Network Map "online now" dots) ---
+    // First connection for this user → tell everyone they came online.
+    const count = online.get(socket.userId) ?? 0;
+    online.set(socket.userId, count + 1);
+    if (count === 0) {
+      io.emit("presence:update", { userId: socket.userId, online: true });
+    }
+
+    // Late joiners (e.g. opening the map mid-session) ask for the full list.
+    socket.on("presence:get", (ack) => ack?.([...online.keys()]));
+
+    socket.on("disconnect", () => {
+      const left = (online.get(socket.userId) ?? 1) - 1;
+      if (left <= 0) {
+        online.delete(socket.userId);
+        io.emit("presence:update", { userId: socket.userId, online: false });
+      } else {
+        online.set(socket.userId, left);
+      }
+    });
 
     // Join a conversation room — only if the user actually belongs to it.
     socket.on("convo:join", async (conversationId) => {
