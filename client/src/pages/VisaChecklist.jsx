@@ -3,7 +3,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none";
+  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 const CATEGORY_META = {
   identity: { label: "Identity", emoji: "🪪" },
@@ -63,15 +63,15 @@ export default function VisaChecklist() {
   const doneCount = data ? data.items.filter((i) => checked[i.document]).length : 0;
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-800">🛂 Visa & Document Checklist</h1>
-      <p className="mt-1 text-slate-500">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Visa & Document Checklist</h1>
+      <p className="mt-1 text-ink-500">
         A personalized document list for Bangladeshi applicants — tick items off as
         you collect them.
       </p>
 
       <form onSubmit={generate}
-        className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
         <label className="min-w-48 flex-1">
           <span className="mb-1 block text-sm font-medium text-slate-600">Target country *</span>
           <input value={form.country} required
@@ -84,7 +84,7 @@ export default function VisaChecklist() {
               onClick={() => setForm({ ...form, degreeLevel: lvl })}
               className={`rounded-lg border px-4 py-2 text-sm font-medium ${
                 form.degreeLevel === lvl
-                  ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                  ? "border-brand-600 bg-brand-50 text-brand-700"
                   : "border-slate-300 text-slate-600 hover:bg-slate-50"
               }`}>
               {lvl}
@@ -92,7 +92,7 @@ export default function VisaChecklist() {
           ))}
         </div>
         <button type="submit" disabled={loading}
-          className="rounded-lg bg-indigo-600 px-5 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white shadow-[var(--shadow-brand)] transition-all hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50">
           {loading ? "🤖 Building…" : "Generate checklist"}
         </button>
       </form>
@@ -104,15 +104,15 @@ export default function VisaChecklist() {
       {data && (
         <div className="mt-6 space-y-4">
           {/* Header card */}
-          <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-5">
+          <div className="rounded-xl border border-brand-200 bg-brand-50 p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h2 className="font-bold text-indigo-900">{data.visaType}</h2>
-                <p className="text-sm text-indigo-700">
+                <h2 className="font-bold text-brand-900">{data.visaType}</h2>
+                <p className="text-sm text-brand-700">
                   Typical processing: {data.processingTimeWeeks} weeks · Nationality: Bangladeshi
                 </p>
               </div>
-              <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-indigo-700">
+              <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-brand-700">
                 {doneCount}/{data.items.length} collected
               </span>
             </div>
@@ -120,8 +120,8 @@ export default function VisaChecklist() {
 
           {/* Grouped checklist */}
           {grouped.map(({ cat, items }) => (
-            <div key={cat} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <div key={cat} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 {CATEGORY_META[cat].emoji} {CATEGORY_META[cat].label}
               </h3>
               <div className="mt-3 space-y-2">
@@ -134,13 +134,13 @@ export default function VisaChecklist() {
                       onChange={() => toggle(item.document)}
                       className="mt-1 h-4 w-4 rounded border-slate-300" />
                     <span className="flex-1">
-                      <span className={`font-medium text-slate-800 ${checked[item.document] ? "line-through" : ""}`}>
+                      <span className={`font-medium text-ink-900 ${checked[item.document] ? "line-through" : ""}`}>
                         {item.document}
                       </span>
                       <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${URGENCY_BADGE[item.urgency]?.style}`}>
                         {URGENCY_BADGE[item.urgency]?.text}
                       </span>
-                      <span className="block text-sm text-slate-500">{item.details}</span>
+                      <span className="block text-sm text-ink-500">{item.details}</span>
                     </span>
                   </label>
                 ))}
@@ -150,14 +150,14 @@ export default function VisaChecklist() {
 
           {/* Tips + reminder preview */}
           {data.tips?.length > 0 && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 💡 Bangladesh-specific tips
               </h3>
               <ul className="mt-2 space-y-1.5">
                 {data.tips.map((t) => (
                   <li key={t} className="flex items-start gap-2 text-sm text-slate-600">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-400" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" />
                     {t}
                   </li>
                 ))}
@@ -166,11 +166,11 @@ export default function VisaChecklist() {
           )}
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
               📧 Reminder preview
             </h3>
             <p className="mt-2 text-sm italic text-slate-600">&ldquo;{data.reminderDraft}&rdquo;</p>
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-ink-400">
               Automatic email reminders arrive when deadline alerts launch.
             </p>
           </div>

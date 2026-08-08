@@ -1,6 +1,10 @@
-// App is now just the route table — each page lives in src/pages.
-import { Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
+// Route table with two layouts:
+//   MarketingLayout — public pages (landing), top nav + footer
+//   AppLayout       — everything behind auth, rendered inside the sidebar shell
+// Auth pages (/login, /register) are full-bleed and use neither.
+import { Routes, Route, Outlet } from "react-router-dom";
+import MarketingNav from "./components/MarketingNav";
+import AppShell from "./components/AppShell";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Register from "./pages/Register";
@@ -26,203 +30,73 @@ import Scholarships from "./pages/Scholarships";
 import AdminScholarships from "./pages/AdminScholarships";
 import SuccessPath from "./pages/SuccessPath";
 import JobMarketPR from "./pages/JobMarketPR";
-import AggregatorDashboard from "./pages/AggregatorDashboard";
-import DuplicateResolution from "./pages/DuplicateResolution";
+
+const STUDENT = ["student"];
+const MEMBERS = ["student", "mentor"];
+const ADMIN = ["admin"];
+
+function MarketingLayout() {
+  return (
+    <div className="bg-app flex min-h-screen flex-col">
+      <MarketingNav />
+      <Outlet />
+    </div>
+  );
+}
+
+// Every signed-in page: sidebar shell + soft app background.
+function AppLayout() {
+  return (
+    <div className="bg-app min-h-screen">
+      <AppShell>
+        <Outlet />
+      </AppShell>
+    </div>
+  );
+}
+
+// Small helper so the route table stays readable.
+const guarded = (element, roles) => <ProtectedRoute roles={roles}>{element}</ProtectedRoute>;
+
 export default function App() {
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-indigo-50/40">
-      <Navbar />
-      <Routes>
+    <Routes>
+      {/* public */}
+      <Route element={<MarketingLayout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/mentors"
-          element={
-            <ProtectedRoute roles={["admin"]}>
-              <AdminMentors />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/universities"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <Universities />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/cost-predictor"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <CostPredictor />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/eligibility"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <Eligibility />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/destination-advisor"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <DestinationAdvisor />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/mentors"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <Mentors />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/network-map"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <NetworkMap />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/survival-guide"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <SurvivalGuide />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/forum"
-          element={
-            <ProtectedRoute roles={["student", "mentor"]}>
-              <Forum />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/forum/insights"
-          element={
-            <ProtectedRoute roles={["student", "mentor"]}>
-              <ForumInsights />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/compatibility"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <Compatibility />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/financial-risk"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <FinancialRisk />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/visa-checklist"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <VisaChecklist />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/scholarships"
-          element={
-            <ProtectedRoute roles={["student", "mentor"]}>
-              <Scholarships />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/success-path"
-          element={
-            <ProtectedRoute roles={["student", "mentor"]}>
-              <SuccessPath />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/job-pr"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <JobMarketPR />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/scholarships"
-          element={
-            <ProtectedRoute roles={["admin"]}>
-              <AdminScholarships />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/bookings"
-          element={
-            <ProtectedRoute roles={["student", "mentor"]}>
-              <Bookings />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/chat"
-          element={
-            <ProtectedRoute roles={["student", "mentor"]}>
-              <Chat />
-            </ProtectedRoute>
-          }
-        />
+      </Route>
 
-        <Route
-          path="/admin/aggregator"
-          element={
-            <ProtectedRoute roles={["admin"]}>
-              <AggregatorDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/aggregator/duplicates"
-          element={
-            <ProtectedRoute roles={["admin"]}>
-              <DuplicateResolution />
-            </ProtectedRoute>
-          }
-        />
+      {/* auth — full-bleed split screen, no chrome */}
+      <Route path="/login" element={<div className="bg-app flex min-h-screen"><Login /></div>} />
+      <Route path="/register" element={<div className="bg-app flex min-h-screen"><Register /></div>} />
 
-      </Routes>
-    </div>
+      {/* application */}
+      <Route element={<AppLayout />}>
+        <Route path="/dashboard" element={guarded(<Dashboard />)} />
+        <Route path="/profile" element={guarded(<Profile />)} />
+
+        <Route path="/universities" element={guarded(<Universities />, STUDENT)} />
+        <Route path="/cost-predictor" element={guarded(<CostPredictor />, STUDENT)} />
+        <Route path="/eligibility" element={guarded(<Eligibility />, STUDENT)} />
+        <Route path="/destination-advisor" element={guarded(<DestinationAdvisor />, STUDENT)} />
+        <Route path="/mentors" element={guarded(<Mentors />, STUDENT)} />
+        <Route path="/network-map" element={guarded(<NetworkMap />, STUDENT)} />
+        <Route path="/survival-guide" element={guarded(<SurvivalGuide />, STUDENT)} />
+        <Route path="/compatibility" element={guarded(<Compatibility />, STUDENT)} />
+        <Route path="/financial-risk" element={guarded(<FinancialRisk />, STUDENT)} />
+        <Route path="/visa-checklist" element={guarded(<VisaChecklist />, STUDENT)} />
+        <Route path="/job-pr" element={guarded(<JobMarketPR />, STUDENT)} />
+
+        <Route path="/forum" element={guarded(<Forum />, MEMBERS)} />
+        <Route path="/forum/insights" element={guarded(<ForumInsights />, MEMBERS)} />
+        <Route path="/scholarships" element={guarded(<Scholarships />, MEMBERS)} />
+        <Route path="/success-path" element={guarded(<SuccessPath />, MEMBERS)} />
+        <Route path="/bookings" element={guarded(<Bookings />, MEMBERS)} />
+        <Route path="/chat" element={guarded(<Chat />, MEMBERS)} />
+
+        <Route path="/admin/mentors" element={guarded(<AdminMentors />, ADMIN)} />
+        <Route path="/admin/scholarships" element={guarded(<AdminScholarships />, ADMIN)} />
+      </Route>
+    </Routes>
   );
 }

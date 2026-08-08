@@ -162,9 +162,9 @@ export default function SurvivalGuide() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-      <h1 className="text-2xl font-bold text-slate-800">🧭 Housing & Survival Guide</h1>
-      <p className="mt-1 text-slate-500">
+    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Housing & Survival Guide</h1>
+      <p className="mt-1 text-ink-500">
         Everything you need near campus before you even land: mosques, halal food,
         hospitals, and transit — sorted by distance.
       </p>
@@ -172,9 +172,9 @@ export default function SurvivalGuide() {
       <form onSubmit={search} className="mt-5 flex flex-wrap gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)}
           placeholder='University or address (e.g., "University of Toronto, Canada")'
-          className="min-w-64 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none" />
+          className="min-w-64 flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10" />
         <button type="submit" disabled={loading}
-          className="rounded-lg bg-indigo-600 px-5 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white shadow-[var(--shadow-brand)] transition-all hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50">
           {loading ? "Searching…" : "Explore"}
         </button>
       </form>
@@ -183,7 +183,7 @@ export default function SurvivalGuide() {
         <div className="mt-3 flex flex-wrap gap-2">
           {favorites.slice(0, 4).map((f) => (
             <button key={f._id} onClick={(e) => { setQ(`${f.name}, ${f.country ?? ""}`); search(e, `${f.name}, ${f.country ?? ""}`); }}
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-600 hover:border-indigo-400 hover:text-indigo-600">
+              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-600 hover:border-brand-400 hover:text-brand-600">
               ★ {f.name}
             </button>
           ))}
@@ -210,7 +210,7 @@ export default function SurvivalGuide() {
       {/* Fixed height: resizing a live Leaflet map leaves unrendered white
           areas unless invalidateSize() is called — simplest is not to resize. */}
       <div ref={mapDivRef}
-        className="mt-5 h-[50vh] w-full rounded-xl border border-slate-200 shadow-sm" />
+        className="mt-5 h-[50vh] w-full rounded-xl border border-slate-200 shadow-[var(--shadow-card)]" />
 
       {/* Category lists */}
       {result && (
@@ -218,26 +218,26 @@ export default function SurvivalGuide() {
           {Object.entries(CATEGORIES).map(([key, cat]) => {
             const items = result.places[key] ?? [];
             return (
-              <div key={key} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="flex items-center gap-2 font-semibold text-slate-800">
+              <div key={key} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+                <h2 className="flex items-center gap-2 font-semibold text-ink-900">
                   <span style={{ color: cat.color }}>●</span> {cat.emoji} {cat.label}
-                  <span className="ml-auto text-xs font-normal text-slate-400">
+                  <span className="ml-auto text-xs font-normal text-ink-400">
                     {items.length} found
                   </span>
                 </h2>
                 {items.length === 0 ? (
-                  <p className="mt-2 text-sm text-slate-400">
+                  <p className="mt-2 text-sm text-ink-400">
                     Nothing mapped within range — a country ambassador may know unlisted options.
                   </p>
                 ) : (
                   <ul className="mt-3 space-y-2">
                     {items.map((p, i) => (
                       <li key={`${p.name}-${i}`} className="flex items-baseline justify-between gap-2 text-sm">
-                        <span className="text-slate-700">
+                        <span className="text-ink-700">
                           {p.name}
-                          {p.detail && <span className="text-slate-400"> · {p.detail}</span>}
+                          {p.detail && <span className="text-ink-400"> · {p.detail}</span>}
                         </span>
-                        <span className="shrink-0 font-medium text-slate-500">{p.distanceKm} km</span>
+                        <span className="shrink-0 font-medium text-ink-500">{p.distanceKm} km</span>
                       </li>
                     ))}
                   </ul>
@@ -249,7 +249,7 @@ export default function SurvivalGuide() {
       )}
 
       {result && (
-        <p className="mt-4 text-xs text-slate-400">
+        <p className="mt-4 text-xs text-ink-400">
           Data from OpenStreetMap contributors — coverage varies by city; unlisted
           places may exist. Distances are straight-line.
         </p>
