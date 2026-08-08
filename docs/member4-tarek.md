@@ -27,6 +27,13 @@ mosques, halal food, hospitals, and transit stops.
 4. Cache by coordinates rounded to 3 decimals (~110 m) for 24 h, so nearby
    geocode variations share one entry.
 5. Leaflet map: campus 🎓 marker + color-coded dots per category + popups.
+6. **Cross-link (thin by design):** after results load, one call to Member
+   3's geospatial endpoint (`GET /api/users/network-map/nearby?lat=&lng=`) —
+   if any opted-in students live within 10 km of the campus, a chip links to
+   `/network-map?country=<theirs>`. The distance logic (`$geoNear` on a
+   2dsphere index) lives on the Network Map side; this page just renders the
+   count. Fail-soft: if that call fails, the guide still renders. Network Map
+   pin popups link back here with `?q=`, which auto-runs the search on load.
 
 **Two real bugs fixed here (own them — they're good stories):**
 - Overpass returned **406**: it blocks requests without a User-Agent. Fix:

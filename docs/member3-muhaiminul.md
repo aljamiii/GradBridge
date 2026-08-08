@@ -13,10 +13,11 @@ External APIs: OpenStreetMap Nominatim (geocoding) + OSM tiles.
 geocoded and plotted on an interactive world map, filterable by country,
 degree, and subject.
 
-**Files:** `models/User.js` (`studentProfile.abroad`) ·
+**Files:** `models/User.js` (`studentProfile.abroad` + 2dsphere index) ·
 `services/geocode.js` (Nominatim) · `controllers/user.controller.js`
-(`updateProfile` geocoding hook + `getNetworkMap`) ·
-`client/src/pages/NetworkMap.jsx` (Leaflet) · `scripts/seedAbroadStudents.js`
+(`updateProfile` geocoding hook + `getNetworkMap` + `getNearbyStudents`) ·
+`client/src/pages/NetworkMap.jsx` (Leaflet) · `scripts/seedAbroadStudents.js` ·
+`scripts/backfillGeoPoints.js`
 
 **Flow:**
 1. Profile page has an opt-in checkbox + city/country/university/degree/subject.
@@ -28,6 +29,19 @@ degree, and subject.
    coordinates — privacy by default.
 4. Leaflet renders OSM tiles + a `divIcon` pin per student; filters run
    client-side over the fetched pins; `fitBounds` re-zooms to the filtered set.
+5. **Cross-link:** each pin popup has "🧭 Explore this area →" deep-linking to
+   `/survival-guide?q=<university, city, country>` (popup content is a DOM
+   element, not an HTML string, so the link navigates inside the SPA). The map
+   also reads `?country=` to open pre-filtered — that's where the Survival
+   Guide's "see them on the Network Map" chip lands. Two map features, two
+   halves of one journey: find your people, then learn their neighbourhood.
+6. **Geospatial endpoint (mine):** `GET /api/users/network-map/nearby?lat=&lng=`
+   powers that chip. `abroad.lat/lng` is mirrored into a GeoJSON `Point`
+   (`location`, **[lng, lat] order** — the classic gotcha) with a **2dsphere
+   index**; a `$geoNear` aggregation (must be the *first* pipeline stage)
+   returns opted-in students within the radius, already distance-sorted and
+   excluding the caller. Same philosophy as my forum insights: **make the
+   database do the work** — no JS haversine loop over every pin.
 
 **Why:**
 - Google Maps now requires a credit card; Leaflet + OSM + Nominatim delivers
@@ -44,6 +58,14 @@ degree, and subject.
   if that fails too → coords null → not plotted, profile intact (fail-soft).
 - *Why filter client-side?* Dozens of pins — refetching per filter would be
   wasteful; the data is already in memory.
+- *How does the "students near this campus" chip know who's nearby?* It calls
+  MY endpoint: `$geoNear` on the 2dsphere index over `abroad.location`. The
+  DB computes great-circle distances from the index and returns sorted
+  results — the Survival Guide page just renders the count.
+- *Why store both lat/lng and a GeoJSON Point?* lat/lng feeds Leaflet
+  directly; the Point feeds the index. They're kept in sync in one place
+  (`updateProfile`), and `backfillGeoPoints.js` migrated pre-existing pins
+  with a single pipeline-update (`updateMany` + aggregation `$set`).
 
 **Practice modifications:**
 - Easy: change the pin color / make PhD pins a different color.

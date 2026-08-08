@@ -58,6 +58,13 @@ const userSchema = new mongoose.Schema(
         subject: String, // e.g., "Computer Science"
         lat: Number, // geocoded server-side via Nominatim
         lng: Number,
+        // The same coordinates as GeoJSON, so the 2dsphere index below can
+        // answer real geospatial queries ($geoNear). GeoJSON order is
+        // [lng, lat] — the classic gotcha, opposite of how humans say it.
+        location: {
+          type: { type: String, enum: ["Point"] },
+          coordinates: { type: [Number], default: undefined }, // [lng, lat]
+        },
       },
     },
 
@@ -78,6 +85,10 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Geospatial index over abroad students' pins: lets $geoNear find "students
+// within N km of this point" straight from the index instead of scanning.
+userSchema.index({ "studentProfile.abroad.location": "2dsphere" });
 
 // Before saving: hash the password (only if it was created/changed).
 userSchema.pre("save", async function () {

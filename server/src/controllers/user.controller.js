@@ -1,5 +1,6 @@
-// CONTROLLER: profile management (FR #3).
+// CONTROLLER: profile management (FR #3) + network-map queries.
 // The logged-in user updates their own role-specific profile.
+import User from "../models/User.js";
 import { geocodePlace } from "../services/geocode.js";
 
 // Shape the user object we send back (same as auth controller).
@@ -42,6 +43,12 @@ export const updateProfile = async (req, res, next) => {
           abroad.lat = coords?.lat ?? null;
           abroad.lng = coords?.lng ?? null;
         }
+        // Mirror into GeoJSON so the 2dsphere index stays in sync
+        // ([lng, lat] order — GeoJSON spec, opposite of lat/lng).
+        abroad.location =
+          abroad.lat != null
+            ? { type: "Point", coordinates: [abroad.lng, abroad.lat] }
+            : undefined;
       }
 
       user.studentProfile = merged;
@@ -70,7 +77,6 @@ export const updateProfile = async (req, res, next) => {
 // degree, and subject (filtering happens client-side on this data).
 export const getNetworkMap = async (req, res, next) => {
   try {
-    const User = (await import("../models/User.js")).default;
     const students = await User.find({
       role: "student",
       "studentProfile.abroad.optIn": true,
@@ -92,6 +98,60 @@ export const getNetworkMap = async (req, res, next) => {
           subject: a.subject,
           lat: a.lat,
           lng: a.lng,
+        };
+      }),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/users/network-map/nearby?lat=&lng=&radiusKm=
+// Geospatial cross-link (used by the Survival Guide's "students here" chip):
+// which opted-in students live near a given point? $geoNear runs on the
+// 2dsphere index — the DB finds, filters, and distance-sorts; no JS scanning.
+export const getNearbyStudents = async (req, res, next) => {
+  try {
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+    const radiusKm = Math.min(50, Number(req.query.radiusKm) || 10);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return res.status(400).json({ success: false, message: "lat and lng are required." });
+    }
+
+    const students = await User.aggregate([
+      {
+        // $geoNear must be the FIRST pipeline stage (it reads the index).
+        $geoNear: {
+          near: { type: "Point", coordinates: [lng, lat] }, // GeoJSON: [lng, lat]
+          key: "studentProfile.abroad.location",
+          distanceField: "distanceMeters",
+          maxDistance: radiusKm * 1000,
+          query: {
+            role: "student",
+            "studentProfile.abroad.optIn": true,
+            _id: { $ne: req.user._id }, // "students here" shouldn't count yourself
+          },
+        },
+      },
+      { $limit: 20 },
+      { $project: { name: 1, "studentProfile.abroad": 1, distanceMeters: 1 } },
+    ]);
+
+    res.json({
+      success: true,
+      count: students.length,
+      students: students.map((s) => {
+        const a = s.studentProfile.abroad;
+        return {
+          id: s._id,
+          name: s.name,
+          city: a.city,
+          country: a.country,
+          university: a.university,
+          degreeLevel: a.degreeLevel,
+          subject: a.subject,
+          distanceKm: Math.round(s.distanceMeters / 100) / 10,
         };
       }),
     });

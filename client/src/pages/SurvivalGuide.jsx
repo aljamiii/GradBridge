@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { api } from "../lib/api";
@@ -98,6 +99,33 @@ export default function SurvivalGuide() {
     }
   };
 
+  // Deep link from the Network Map: /survival-guide?q=… auto-runs the search.
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const qp = searchParams.get("q");
+    if (qp) {
+      setQ(qp);
+      search(null, qp);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cross-link back: ask the network map's geospatial endpoint which
+  // GradBridge students live near this campus (server-side $geoNear —
+  // matched by distance, not name, and it excludes the current user).
+  const [nearby, setNearby] = useState(null);
+  useEffect(() => {
+    if (!result) return;
+    setNearby(null);
+    api(
+      `/api/users/network-map/nearby?lat=${result.center.lat}&lng=${result.center.lng}&radiusKm=10`
+    )
+      .then((d) => {
+        if (d.count > 0) setNearby({ count: d.count, country: d.students[0].country });
+      })
+      .catch(() => {}); // enrichment only — never block the guide itself
+  }, [result]);
+
   // One-click shortcut using the student's saved favorites.
   const [favorites, setFavorites] = useState([]);
   useEffect(() => {
@@ -135,6 +163,19 @@ export default function SurvivalGuide() {
 
       {error && (
         <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+
+      {result && nearby && (
+        <div className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          🎓 {nearby.count} GradBridge student{nearby.count !== 1 && "s"} near this
+          campus —{" "}
+          <Link
+            to={`/network-map?country=${encodeURIComponent(nearby.country)}`}
+            className="font-medium text-emerald-700 underline hover:text-emerald-900"
+          >
+            see them on the Network Map →
+          </Link>
+        </div>
       )}
 
       {/* Fixed height: resizing a live Leaflet map leaves unrendered white

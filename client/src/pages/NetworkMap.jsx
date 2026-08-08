@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { api } from "../lib/api";
@@ -17,9 +18,17 @@ const pinIcon = L.divIcon({
 });
 
 export default function NetworkMap() {
+  const navigate = useNavigate();
+  // The Survival Guide's "see them on the Network Map" chip links here with
+  // ?country=… so the map opens pre-filtered to that campus's country.
+  const [searchParams] = useSearchParams();
   const [pins, setPins] = useState([]);
   const [error, setError] = useState("");
-  const [filters, setFilters] = useState({ country: "all", degreeLevel: "all", subject: "" });
+  const [filters, setFilters] = useState({
+    country: searchParams.get("country") ?? "all",
+    degreeLevel: "all",
+    subject: "",
+  });
 
   const mapDivRef = useRef(null);   // the <div> Leaflet renders into
   const mapRef = useRef(null);      // the Leaflet map instance
@@ -61,16 +70,33 @@ export default function NetworkMap() {
     const map = mapRef.current;
     if (!map) return;
 
+    // Popup content is a real DOM element (not an HTML string) so the
+    // cross-link can navigate inside the SPA instead of a full page reload.
+    const popupContent = (p) => {
+      const el = document.createElement("div");
+      el.innerHTML = `<strong>${p.name}</strong><br/>
+         ${p.degreeLevel ?? ""} in ${p.subject ?? "—"}<br/>
+         🎓 ${p.university ?? "—"}<br/>
+         📍 ${p.city}, ${p.country}<br/>`;
+      const link = document.createElement("a");
+      link.href = "#";
+      link.textContent = "🧭 Explore this area →";
+      link.className = "mt-1 inline-block text-sm font-medium text-indigo-600 hover:underline";
+      link.onclick = (e) => {
+        e.preventDefault();
+        // Same "most specific first" shape the Survival Guide geocodes best.
+        const q = [p.university, p.city, p.country].filter(Boolean).join(", ");
+        navigate(`/survival-guide?q=${encodeURIComponent(q)}`);
+      };
+      el.appendChild(link);
+      return el;
+    };
+
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = visible.map((p) =>
       L.marker([p.lat, p.lng], { icon: pinIcon })
         .addTo(map)
-        .bindPopup(
-          `<strong>${p.name}</strong><br/>
-           ${p.degreeLevel ?? ""} in ${p.subject ?? "—"}<br/>
-           🎓 ${p.university ?? "—"}<br/>
-           📍 ${p.city}, ${p.country}`
-        )
+        .bindPopup(popupContent(p))
     );
 
     // Zoom to fit the filtered pins (with a little padding).
@@ -80,7 +106,7 @@ export default function NetworkMap() {
         { maxZoom: 6 }
       );
     }
-  }, [visible]);
+  }, [visible, navigate]);
 
   const countries = [...new Set(pins.map((p) => p.country))].sort();
 
