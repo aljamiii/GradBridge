@@ -153,10 +153,20 @@ via multiple channels).
 - *Can I join a conversation I'm not part of?* No — `convo:join` loads the
   conversation and checks I'm the student or the mentor before `socket.join`.
 
+**Read receipts (upgraded — was the "hard" practice mod):** reads happen in
+two places, and BOTH must refresh the navbar badge: ① opening a thread (REST
+history load marks read, then the server emits `inbox:update` to *my own*
+personal room — without that the red badge stuck after reading); ② a live
+message arriving while the thread is open (client emits `convo:read`, the
+server verifies membership, clears `unreadFor`, and pings my room). The inbox
+and thread header also show a role tag (Mentor/Student) + university, since
+peer chat means not everyone is a mentor.
+
 **Practice modifications:**
 - Easy: add a "typing…" event (emit on input, show under the header).
 - Medium: add message timestamps grouped by day.
-- Hard: mark-read via socket instead of on history load.
+- Hard: read receipts for the SENDER ("seen ✓✓") — you'd need a per-message
+  readAt and a socket event back to the sender's room.
 
 ---
 

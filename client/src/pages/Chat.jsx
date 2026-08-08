@@ -67,6 +67,11 @@ export default function Chat() {
       if (msg.conversation !== activeId) return;
       // Dedupe: our own messages arrive twice (send-ack + room broadcast).
       setMessages((m) => (m.some((x) => x._id === msg._id) ? m : [...m, msg]));
+      // I'm looking at this thread, so a live incoming message is instantly
+      // read — otherwise the navbar badge would stay red forever.
+      if (String(msg.sender) !== String(user.id)) {
+        socket?.emit("convo:read", activeId);
+      }
     };
     socket?.on("message:new", onNew);
 
@@ -74,7 +79,7 @@ export default function Chat() {
       socket?.emit("convo:leave", activeId);
       socket?.off("message:new", onNew);
     };
-  }, [activeId, loadInbox]);
+  }, [activeId, loadInbox, user.id]);
 
   // Keep the newest message in view.
   useEffect(() => {
@@ -99,6 +104,19 @@ export default function Chat() {
 
   // Peer-to-peer: the API tells us who the other side is, whatever their role.
   const otherName = (c) => c.other?.name ?? "Unknown";
+  const active = conversations.find((c) => c.id === activeId);
+
+  // Not everyone is a mentor anymore — label who you're talking to.
+  const RoleTag = ({ role }) =>
+    role ? (
+      <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+        role === "mentor"
+          ? "bg-indigo-50 text-indigo-600"
+          : "bg-emerald-50 text-emerald-700"
+      }`}>
+        {role === "mentor" ? "Mentor" : "Student"}
+      </span>
+    ) : null;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 gap-4 px-4 py-8">
@@ -119,7 +137,9 @@ export default function Chat() {
                   c.id === activeId ? "bg-indigo-50" : "hover:bg-slate-100"
                 }`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-800">{otherName(c)}</span>
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                    {otherName(c)} <RoleTag role={c.other?.role} />
+                  </span>
                   {c.unread > 0 && (
                     <span className="rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
                       {c.unread}
@@ -141,6 +161,17 @@ export default function Chat() {
           </div>
         ) : (
           <>
+            {active?.other && (
+              <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2.5">
+                <span className="font-medium text-slate-800">{active.other.name}</span>
+                <RoleTag role={active.other.role} />
+                {active.other.university && (
+                  <span className="truncate text-xs text-slate-400">
+                    🎓 {active.other.university}
+                  </span>
+                )}
+              </div>
+            )}
             <div className="flex-1 space-y-2 overflow-y-auto p-4">
               {messages.map((m) => (
                 <Bubble key={m._id} msg={m}

@@ -65,6 +65,21 @@ export const initSocket = (httpServer) => {
       socket.leave(`convo:${conversationId}`);
     });
 
+    // Mark a thread read while it's OPEN (live messages never hit the REST
+    // history endpoint, so without this they'd stay unread forever).
+    socket.on("convo:read", async (conversationId) => {
+      const convo = await Conversation.findById(conversationId).catch(() => null);
+      const mine =
+        convo && convo.participants.map(String).includes(String(socket.userId));
+      if (!mine) return;
+      const { default: Message } = await import("./models/Message.js");
+      await Message.updateMany(
+        { conversation: convo._id, unreadFor: socket.userId },
+        { unreadFor: null }
+      );
+      io.to(`user:${socket.userId}`).emit("inbox:update"); // refresh badge
+    });
+
     // Live message: save via the shared helper, which also emits to rooms.
     socket.on("message:send", async ({ conversationId, text }, ack) => {
       try {

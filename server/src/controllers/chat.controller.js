@@ -76,7 +76,10 @@ export const listConversations = async (req, res, next) => {
   try {
     const convos = await Conversation.find({ participants: req.user._id })
       .sort({ lastMessageAt: -1 })
-      .populate("participants", "name role mentorProfile.university");
+      .populate(
+        "participants",
+        "name role mentorProfile.university studentProfile.abroad.university"
+      );
 
     const withUnread = await Promise.all(
       convos.map(async (c) => {
@@ -91,7 +94,12 @@ export const listConversations = async (req, res, next) => {
                 id: other._id,
                 name: other.name,
                 role: other.role,
-                university: other.mentorProfile?.university ?? null,
+                // Not everyone is a mentor: students carry their university
+                // in the abroad profile instead.
+                university:
+                  other.mentorProfile?.university ??
+                  other.studentProfile?.abroad?.university ??
+                  null,
               }
             : null,
           lastMessageAt: c.lastMessageAt,
@@ -121,11 +129,13 @@ export const getMessages = async (req, res, next) => {
       .sort({ createdAt: 1 })
       .limit(200);
 
-    // Opening the thread = reading it.
+    // Opening the thread = reading it. Then tell MY other tabs/navbar to
+    // refresh the badge — without this the red count sticks after reading.
     await Message.updateMany(
       { conversation: convo._id, unreadFor: req.user._id },
       { unreadFor: null }
     );
+    getIO()?.to(`user:${req.user._id}`).emit("inbox:update");
 
     res.json({ success: true, messages });
   } catch (err) {
