@@ -39,7 +39,11 @@ degree, and subject.
    Guide's "see them on the Network Map" chip lands. Two map features, two
    halves of one journey: find your people, then learn their neighbourhood.
 6. **Geospatial endpoint (mine):** `GET /api/users/network-map/nearby?lat=&lng=`
-   powers the Survival Guide's students-nearby sidebar and its green map pins. `abroad.lat/lng` is mirrored into a GeoJSON `Point`
+   powers the Survival Guide's green map pins and summary line.
+7. **Radius search:** clicking anywhere on the map draws a 25 km circle and
+   asks that same endpoint who's inside it — the sidebar flips to "Near your
+   click" with per-student distance badges. One `$geoNear` endpoint, two
+   consumers (Survival Guide cross-link + interactive map probe). `abroad.lat/lng` is mirrored into a GeoJSON `Point`
    (`location`, **[lng, lat] order** — the classic gotcha) with a **2dsphere
    index**; a `$geoNear` aggregation (must be the *first* pipeline stage)
    returns opted-in students within the radius, already distance-sorted and

@@ -17,6 +17,35 @@ const pinIcon = L.divIcon({
   popupAnchor: [0, -20],
 });
 
+// Radius for "click anywhere → who's near that point" (server-side $geoNear).
+const PROBE_RADIUS_KM = 25;
+
+// One student profile card in the sidebar. `badge` is optional (e.g. "3.2 km").
+function StudentCard({ s, badge, onClick }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="w-full rounded-lg border border-slate-100 bg-slate-50 p-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 font-semibold text-white">
+          {s.name?.[0] ?? "?"}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-slate-800">{s.name}</p>
+          <p className="truncate text-xs text-slate-500">
+            {s.degreeLevel ?? "Student"}
+            {s.subject ? ` in ${s.subject}` : ""}
+          </p>
+        </div>
+        {badge && (
+          <span className="ml-auto shrink-0 text-xs font-medium text-emerald-700">{badge}</span>
+        )}
+      </div>
+      <p className="mt-1.5 truncate text-xs text-slate-500">🎓 {s.university ?? "—"}</p>
+      <p className="truncate text-xs text-slate-400">📍 {s.city}, {s.country}</p>
+    </button>
+  );
+}
+
 export default function NetworkMap() {
   const navigate = useNavigate();
   // The Survival Guide's "see them on the Network Map" chip links here with
@@ -33,6 +62,11 @@ export default function NetworkMap() {
   const mapDivRef = useRef(null);   // the <div> Leaflet renders into
   const mapRef = useRef(null);      // the Leaflet map instance
   const markersRef = useRef([]);    // current markers, so we can clear them
+  const probeCircleRef = useRef(null); // the radius-search circle
+
+  // Radius search: clicking the map probes "who's within 25 km of here?"
+  // { lat, lng, students? } — students undefined while the query runs.
+  const [probe, setProbe] = useState(null);
 
   // Load pins once.
   useEffect(() => {
@@ -49,8 +83,35 @@ export default function NetworkMap() {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 18,
     }).addTo(map);
+    // Radius search: any click on open map becomes a probe point.
+    map.on("click", (e) => setProbe({ lat: e.latlng.lat, lng: e.latlng.lng }));
     mapRef.current = map;
   }, []);
+
+  // Probe changed → draw the circle and ask the geospatial endpoint who's
+  // inside it. Deps are lat/lng only, so storing the results doesn't refetch.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    probeCircleRef.current?.remove();
+    probeCircleRef.current = null;
+    if (!probe) return;
+
+    probeCircleRef.current = L.circle([probe.lat, probe.lng], {
+      radius: PROBE_RADIUS_KM * 1000,
+      color: "#4f46e5",
+      weight: 1.5,
+      fillColor: "#4f46e5",
+      fillOpacity: 0.08,
+    }).addTo(map);
+
+    api(
+      `/api/users/network-map/nearby?lat=${probe.lat}&lng=${probe.lng}&radiusKm=${PROBE_RADIUS_KM}`
+    )
+      .then((d) => setProbe((p) => (p ? { ...p, students: d.students ?? [] } : p)))
+      .catch(() => setProbe((p) => (p ? { ...p, students: [] } : p)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [probe?.lat, probe?.lng]);
 
   // Spec: filterable by country, degree, and subject.
   const visible = useMemo(
@@ -111,13 +172,19 @@ export default function NetworkMap() {
   const countries = [...new Set(pins.map((p) => p.country))].sort();
 
   // Sidebar card → fly the map to that student's pin and open its popup.
-  // markersRef is built from `visible` in the same order, so indices align.
-  const focusPin = (i) => {
-    const marker = markersRef.current[i];
+  // markersRef is built from `visible` in the same order, so we find the
+  // marker by id; probe results filtered out of `visible` still fly to coords.
+  const focusStudent = (s) => {
     const map = mapRef.current;
-    if (!marker || !map) return;
-    map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 6), { duration: 0.8 });
-    marker.openPopup();
+    if (!map) return;
+    const i = visible.findIndex((v) => String(v.id) === String(s.id));
+    const marker = markersRef.current[i];
+    if (marker) {
+      map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 6), { duration: 0.8 });
+      marker.openPopup();
+    } else if (s.lat != null) {
+      map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 6), { duration: 0.8 });
+    }
   };
 
   return (
@@ -159,42 +226,63 @@ export default function NetworkMap() {
           className="h-[65vh] w-full rounded-xl border border-slate-200 shadow-sm lg:flex-1" />
 
         <aside className="flex w-full shrink-0 flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:h-[65vh] lg:w-72">
-          <h2 className="flex items-center gap-2 font-semibold text-slate-800">
-            🎓 Students
-            <span className="ml-auto text-xs font-normal text-slate-400">
-              {visible.length} shown
-            </span>
-          </h2>
+          {probe ? (
+            <>
+              <h2 className="flex items-center gap-2 font-semibold text-slate-800">
+                📍 Near your click
+                <span className="ml-auto text-xs font-normal text-slate-400">
+                  {probe.students ? `${probe.students.length} found` : "searching…"}
+                </span>
+              </h2>
+              <button type="button" onClick={() => setProbe(null)}
+                className="mt-1 self-start text-xs text-indigo-600 hover:underline">
+                ✕ Clear — back to all students
+              </button>
 
-          {visible.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-400">
-              No students match these filters yet — try widening them, or opt in
-              from your Profile page if you're already abroad.
-            </p>
+              {probe.students && probe.students.length === 0 && (
+                <p className="mt-3 text-sm text-slate-400">
+                  No students within {PROBE_RADIUS_KM} km of that point — try
+                  clicking closer to a green pin.
+                </p>
+              )}
+              {probe.students && probe.students.length > 0 && (
+                <ul className="mt-3 flex-1 space-y-2 overflow-y-auto">
+                  {probe.students.map((s) => (
+                    <li key={s.id}>
+                      <StudentCard s={s} badge={`${s.distanceKm} km`}
+                        onClick={() => focusStudent(s)} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           ) : (
-            <ul className="mt-3 flex-1 space-y-2 overflow-y-auto">
-              {visible.map((p, i) => (
-                <li key={p.id}>
-                  <button type="button" onClick={() => focusPin(i)}
-                    className="w-full rounded-lg border border-slate-100 bg-slate-50 p-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
-                    <div className="flex items-center gap-2.5">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 font-semibold text-white">
-                        {p.name?.[0] ?? "?"}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-800">{p.name}</p>
-                        <p className="truncate text-xs text-slate-500">
-                          {p.degreeLevel ?? "Student"}
-                          {p.subject ? ` in ${p.subject}` : ""}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="mt-1.5 truncate text-xs text-slate-500">🎓 {p.university ?? "—"}</p>
-                    <p className="truncate text-xs text-slate-400">📍 {p.city}, {p.country}</p>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <>
+              <h2 className="flex items-center gap-2 font-semibold text-slate-800">
+                🎓 Students
+                <span className="ml-auto text-xs font-normal text-slate-400">
+                  {visible.length} shown
+                </span>
+              </h2>
+              <p className="mt-1 text-xs text-slate-400">
+                💡 Click anywhere on the map to find students near that point.
+              </p>
+
+              {visible.length === 0 ? (
+                <p className="mt-3 text-sm text-slate-400">
+                  No students match these filters yet — try widening them, or opt in
+                  from your Profile page if you're already abroad.
+                </p>
+              ) : (
+                <ul className="mt-3 flex-1 space-y-2 overflow-y-auto">
+                  {visible.map((p) => (
+                    <li key={p.id}>
+                      <StudentCard s={p} onClick={() => focusStudent(p)} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
         </aside>
       </div>
