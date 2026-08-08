@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 
 const inputClass =
-  "rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none";
+  "rounded-lg border border-slate-300 px-3 py-2 text-sm text-ink-900 placeholder-slate-400 focus:border-brand-500 focus:outline-none";
 
 const LEVEL_STYLES = {
   strong: "bg-green-50 border-green-200 text-green-800",
@@ -41,9 +41,9 @@ function JobMarket() {
   };
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="font-semibold text-slate-800">💼 Live Job Market</h2>
-      <p className="mt-0.5 text-sm text-slate-500">
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
+      <h2 className="font-semibold text-ink-900">💼 Live Job Market</h2>
+      <p className="mt-0.5 text-sm text-ink-500">
         How many jobs exist in your field right now — live from Adzuna.
       </p>
 
@@ -57,7 +57,7 @@ function JobMarket() {
           onChange={(e) => setForm({ ...form, field: e.target.value })}
           className={`${inputClass} flex-1 min-w-48`} />
         <button type="submit" disabled={loading}
-          className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
           {loading ? "Searching…" : "Check market"}
         </button>
       </form>
@@ -70,29 +70,29 @@ function JobMarket() {
         <div className="mt-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-lg bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">Open positions</p>
-              <p className="text-2xl font-bold text-slate-800">{data.count.toLocaleString()}</p>
-              <p className="text-xs text-slate-400">"{data.field}" in {data.country}</p>
+              <p className="text-sm text-ink-500">Open positions</p>
+              <p className="text-2xl font-bold text-ink-900">{data.count.toLocaleString()}</p>
+              <p className="text-xs text-ink-400">"{data.field}" in {data.country}</p>
             </div>
             <div className="rounded-lg bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">Avg advertised salary</p>
-              <p className="text-2xl font-bold text-slate-800">
+              <p className="text-sm text-ink-500">Avg advertised salary</p>
+              <p className="text-2xl font-bold text-ink-900">
                 {data.avgSalary ? data.avgSalary.toLocaleString() : "—"}
               </p>
-              <p className="text-xs text-slate-400">local currency, from live ads</p>
+              <p className="text-xs text-ink-400">local currency, from live ads</p>
             </div>
           </div>
           {data.sampleJobs?.length > 0 && (
             <div className="mt-3 space-y-1">
               {data.sampleJobs.map((j) => (
                 <a key={j.url} href={j.url} target="_blank" rel="noreferrer"
-                  className="block truncate text-sm text-indigo-600 hover:underline">
+                  className="block truncate text-sm text-brand-600 hover:underline">
                   ↗ {j.title} — {j.company ?? "?"}, {j.location ?? ""}
                 </a>
               ))}
             </div>
           )}
-          <p className="mt-2 text-xs text-slate-400">Source: {data.source}</p>
+          <p className="mt-2 text-xs text-ink-400">Source: {data.source}</p>
         </div>
       )}
     </section>
@@ -122,21 +122,21 @@ function PRCalculator() {
   };
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="font-semibold text-slate-800">🏅 PR Points Estimator</h2>
-      <p className="mt-0.5 text-sm text-slate-500">
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
+      <h2 className="font-semibold text-ink-900">🏅 PR Points Estimator</h2>
+      <p className="mt-0.5 text-sm text-ink-500">
         Rule-based scoring modeled on the real Canada CRS and Australia 189 systems.
       </p>
 
       <form onSubmit={compute} className="mt-4 grid gap-3 sm:grid-cols-4">
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-slate-500">Age</span>
+          <span className="mb-1 block text-xs font-medium text-ink-500">Age</span>
           <input type="number" min={16} max={60} required value={form.age}
             onChange={(e) => setForm({ ...form, age: e.target.value })}
             className={`${inputClass} w-full`} />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-slate-500">Highest education</span>
+          <span className="mb-1 block text-xs font-medium text-ink-500">Highest education</span>
           <select value={form.education}
             onChange={(e) => setForm({ ...form, education: e.target.value })}
             className={`${inputClass} w-full`}>
@@ -147,19 +147,19 @@ function PRCalculator() {
           </select>
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-slate-500">Years of work experience</span>
+          <span className="mb-1 block text-xs font-medium text-ink-500">Years of work experience</span>
           <input type="number" min={0} max={30} value={form.yearsExperience}
             onChange={(e) => setForm({ ...form, yearsExperience: e.target.value })}
             className={`${inputClass} w-full`} />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-slate-500">IELTS overall</span>
+          <span className="mb-1 block text-xs font-medium text-ink-500">IELTS overall</span>
           <input type="number" min={4} max={9} step={0.5} value={form.ielts}
             onChange={(e) => setForm({ ...form, ielts: e.target.value })}
             className={`${inputClass} w-full`} />
         </label>
         <button type="submit" disabled={loading}
-          className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 sm:col-span-4 sm:justify-self-start">
+          className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50 sm:col-span-4 sm:justify-self-start">
           {loading ? "Computing…" : "Calculate my points"}
         </button>
       </form>
@@ -203,7 +203,7 @@ function PRCalculator() {
               </div>
             </div>
           ))}
-          <p className="text-xs text-slate-400 lg:col-span-2">{data.note}</p>
+          <p className="text-xs text-ink-400 lg:col-span-2">{data.note}</p>
         </div>
       )}
     </section>
@@ -214,8 +214,8 @@ export default function JobMarketPR() {
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 space-y-5 px-4 py-10">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">💼 Job Market & PR Outlook</h1>
-        <p className="mt-1 text-slate-500">
+        <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Job Market & PR Outlook</h1>
+        <p className="mt-1 text-ink-500">
           What happens after graduation — real job demand and your permanent-residency odds.
         </p>
       </div>

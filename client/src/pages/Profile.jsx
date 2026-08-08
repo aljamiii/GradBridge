@@ -6,7 +6,7 @@ const HELP_TOPICS = ["visa", "housing", "funding", "part-time jobs", "admissions
 
 // Shared input styling
 const inputClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none";
+  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 // A labelled field wrapper so the forms stay tidy.
 function Field({ label, children }) {
@@ -82,7 +82,7 @@ function StudentForm({ user, onSave, saving }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
         Academic Profile
       </h2>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -120,7 +120,7 @@ function StudentForm({ user, onSave, saving }) {
         </Field>
       </div>
 
-      <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+      <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-ink-400">
         Lifestyle Preferences
       </h2>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -140,10 +140,10 @@ function StudentForm({ user, onSave, saving }) {
         </Field>
       </div>
 
-      <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+      <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-ink-400">
         🗺️ Network Map
       </h2>
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-ink-700">
         <input type="checkbox" checked={form.abroadOptIn}
           onChange={(e) => setForm({ ...form, abroadOptIn: e.target.checked })}
           className="h-4 w-4 rounded border-slate-300" />
@@ -185,7 +185,7 @@ function StudentForm({ user, onSave, saving }) {
                     className={`rounded-full border px-3 py-1.5 text-sm transition ${
                       on
                         ? "border-amber-500 bg-amber-50 text-amber-700"
-                        : "border-slate-300 bg-white text-slate-500 hover:border-amber-400"
+                        : "border-slate-300 bg-white text-ink-500 hover:border-amber-400"
                     }`}>
                     {on ? "✓ " : ""}{topic}
                   </button>
@@ -197,7 +197,7 @@ function StudentForm({ user, onSave, saving }) {
       )}
 
       <button type="submit" disabled={saving}
-        className="rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        className="rounded-lg bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
         {saving ? "Saving…" : "Save profile"}
       </button>
     </form>
@@ -266,7 +266,7 @@ function MentorForm({ user, onSave, saving }) {
         <input name="availability" value={form.availability} onChange={set}
           placeholder="Weekends, 8–10pm Bangladesh time" className={inputClass} />
       </Field>
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-ink-700">
         <input type="checkbox" checked={form.isVisible}
           onChange={(e) => setForm({ ...form, isVisible: e.target.checked })}
           className="h-4 w-4 rounded border-slate-300" />
@@ -274,7 +274,7 @@ function MentorForm({ user, onSave, saving }) {
       </label>
 
       <button type="submit" disabled={saving}
-        className="rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        className="rounded-lg bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
         {saving ? "Saving…" : "Save profile"}
       </button>
     </form>
@@ -301,9 +301,9 @@ export default function Profile() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-800">Your Profile</h1>
-      <p className="mt-1 text-slate-500">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Your Profile</h1>
+      <p className="mt-1 text-ink-500">
         {user.role === "student"
           ? "This information powers your AI cost estimates, eligibility checks, and compatibility scores."
           : "Students will see this when searching for mentors."}
@@ -321,7 +321,7 @@ export default function Profile() {
         </div>
       )}
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mt-6 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
         {user.role === "mentor" ? (
           <MentorForm user={user} onSave={handleSave} saving={saving} />
         ) : (

@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none";
+  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 // Verdict banner styling per outcome.
 const VERDICTS = {
@@ -72,17 +72,17 @@ export default function Eligibility() {
   const verdict = result && (VERDICTS[result.verdict] ?? VERDICTS.borderline);
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-800">🎯 Eligibility & Gap Analyzer</h1>
-      <p className="mt-1 text-slate-500">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Eligibility & Gap Analyzer</h1>
+      <p className="mt-1 text-ink-500">
         An honest AI check of your profile against a program&apos;s typical requirements.
       </p>
 
       {/* Profile snapshot the analysis will use */}
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+      <div className="mt-6 rounded-2xl border border-slate-200/80 bg-white p-4 text-sm shadow-[var(--shadow-card)]">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-slate-600">
-            <span className="font-semibold text-slate-400 uppercase tracking-wide text-xs">
+            <span className="font-semibold text-ink-400 uppercase tracking-wide text-xs">
               Your profile:{" "}
             </span>
             {profileIncomplete ? (
@@ -98,7 +98,7 @@ export default function Eligibility() {
               </>
             )}
           </div>
-          <Link to="/profile" className="font-medium text-indigo-600 hover:underline">
+          <Link to="/profile" className="font-medium text-brand-600 hover:underline">
             Edit profile
           </Link>
         </div>
@@ -106,7 +106,7 @@ export default function Eligibility() {
 
       {/* Target program form */}
       <form onSubmit={analyze}
-        className="mt-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-600">University *</span>
@@ -135,7 +135,7 @@ export default function Eligibility() {
                 onClick={() => setForm({ ...form, degreeLevel: lvl })}
                 className={`rounded-lg border px-4 py-2 text-sm font-medium ${
                   form.degreeLevel === lvl
-                    ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                    ? "border-brand-600 bg-brand-50 text-brand-700"
                     : "border-slate-300 text-slate-600 hover:bg-slate-50"
                 }`}>
                 {lvl}
@@ -143,7 +143,7 @@ export default function Eligibility() {
             ))}
           </div>
           <button type="submit" disabled={loading || profileIncomplete}
-            className="rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+            className="rounded-lg bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
             {loading ? "🤖 Analyzing…" : "Analyze my eligibility"}
           </button>
         </div>
@@ -170,26 +170,26 @@ export default function Eligibility() {
 
           {/* Gaps */}
           {result.gaps?.length > 0 && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 What&apos;s missing ({result.gaps.length})
               </h3>
               <div className="mt-3 space-y-4">
                 {result.gaps.map((g) => (
                   <div key={g.area} className="border-l-2 border-slate-200 pl-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-slate-800">{g.area}</span>
+                      <span className="font-semibold text-ink-900">{g.area}</span>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
                         SEVERITY_BADGE[g.severity] ?? SEVERITY_BADGE.minor
                       }`}>
                         {g.severity}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Typically required: <span className="text-slate-700">{g.requirement}</span>
-                      {" · "}You: <span className="text-slate-700">{g.yourStatus}</span>
+                    <p className="mt-1 text-sm text-ink-500">
+                      Typically required: <span className="text-ink-700">{g.requirement}</span>
+                      {" · "}You: <span className="text-ink-700">{g.yourStatus}</span>
                     </p>
-                    <p className="mt-1 text-sm text-indigo-700">→ {g.advice}</p>
+                    <p className="mt-1 text-sm text-brand-700">→ {g.advice}</p>
                   </div>
                 ))}
               </div>
@@ -198,8 +198,8 @@ export default function Eligibility() {
 
           {/* Strengths */}
           {result.strengths?.length > 0 && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 💪 Your strengths
               </h3>
               <ul className="mt-2 space-y-1.5">
@@ -213,7 +213,7 @@ export default function Eligibility() {
             </div>
           )}
 
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-ink-400">
             AI assessment based on typical published requirements — always confirm on the
             program&apos;s official admissions page.
           </p>

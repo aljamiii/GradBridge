@@ -6,7 +6,7 @@ const STATUS_BADGE = {
   pending: "bg-amber-100 text-amber-700",
   confirmed: "bg-green-100 text-green-700",
   declined: "bg-red-100 text-red-700",
-  cancelled: "bg-slate-100 text-slate-500",
+  cancelled: "bg-slate-100 text-ink-500",
 };
 
 export default function Bookings() {
@@ -41,9 +41,9 @@ export default function Bookings() {
   const isMentor = user.role === "mentor";
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-800">📅 My Sessions</h1>
-      <p className="mt-1 text-slate-500">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">My Sessions</h1>
+      <p className="mt-1 text-ink-500">
         {isMentor
           ? "Session requests from students — confirm or decline."
           : "Your booked sessions with mentors."}
@@ -55,20 +55,20 @@ export default function Bookings() {
 
       <div className="mt-6 space-y-4">
         {bookings === null ? (
-          <p className="py-10 text-center text-slate-400">Loading…</p>
+          <p className="py-10 text-center text-ink-400">Loading…</p>
         ) : bookings.length === 0 ? (
-          <p className="py-10 text-center text-slate-400">
+          <p className="py-10 text-center text-ink-400">
             No sessions yet{isMentor ? "." : " — find a mentor and book one!"}
           </p>
         ) : (
           bookings.map((b) => (
-            <div key={b._id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div key={b._id} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <h3 className="font-semibold text-slate-800">
+                  <h3 className="font-semibold text-ink-900">
                     {isMentor ? b.student?.name : b.mentor?.name}
                   </h3>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-ink-500">
                     {new Date(b.start).toLocaleString()} · {b.durationMins} min
                   </p>
                   {b.topic && <p className="mt-1 text-sm text-slate-600">📝 {b.topic}</p>}

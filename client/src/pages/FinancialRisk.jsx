@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none";
+  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 const usd = (n) => `$${Number(n).toLocaleString()}`;
 const bdt = (n) => `৳${Number(n).toLocaleString()}`;
@@ -49,16 +49,16 @@ export default function FinancialRisk() {
   const risk = data && RISK_STYLES[data.risk];
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-800">📉 Financial Risk & Savings Planner</h1>
-      <p className="mt-1 text-slate-500">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Financial Risk & Savings Planner</h1>
+      <p className="mt-1 text-ink-500">
         Cost vs. funding, honestly — the gap, the risk, and exactly what to save
         each month. Get your cost estimate from the{" "}
-        <Link to="/cost-predictor" className="text-indigo-600 hover:underline">Cost Predictor</Link> first.
+        <Link to="/cost-predictor" className="text-brand-600 hover:underline">Cost Predictor</Link> first.
       </p>
 
       <form onSubmit={analyze}
-        className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        className="mt-6 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-600">
@@ -90,7 +90,7 @@ export default function FinancialRisk() {
           </label>
         </div>
         <button type="submit" disabled={loading}
-          className="mt-5 rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          className="mt-5 rounded-lg bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
           {loading ? "Calculating…" : "Analyze my risk"}
         </button>
       </form>
@@ -109,39 +109,39 @@ export default function FinancialRisk() {
 
           {/* The numbers */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Funding gap</p>
-              <p className="mt-1 text-2xl font-bold text-slate-800">{usd(data.shortfallUSD)}</p>
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+              <p className="text-sm text-ink-500">Funding gap</p>
+              <p className="mt-1 text-2xl font-bold text-ink-900">{usd(data.shortfallUSD)}</p>
               {data.shortfallBDT != null && (
-                <p className="text-sm text-slate-500">≈ {bdt(data.shortfallBDT)}</p>
+                <p className="text-sm text-ink-500">≈ {bdt(data.shortfallBDT)}</p>
               )}
-              <p className="mt-1 text-xs text-slate-400">{data.shortfallPercent}% of total cost</p>
+              <p className="mt-1 text-xs text-ink-400">{data.shortfallPercent}% of total cost</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Scholarship coverage</p>
-              <p className="mt-1 text-2xl font-bold text-slate-800">{data.scholarshipCoveragePercent}%</p>
-              <p className="mt-1 text-xs text-slate-400">of the total cost</p>
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+              <p className="text-sm text-ink-500">Scholarship coverage</p>
+              <p className="mt-1 text-2xl font-bold text-ink-900">{data.scholarshipCoveragePercent}%</p>
+              <p className="mt-1 text-xs text-ink-400">of the total cost</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Save monthly</p>
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+              <p className="text-sm text-ink-500">Save monthly</p>
               {data.monthlySavingsUSD != null ? (
                 <>
-                  <p className="mt-1 text-2xl font-bold text-slate-800">{usd(data.monthlySavingsUSD)}</p>
+                  <p className="mt-1 text-2xl font-bold text-ink-900">{usd(data.monthlySavingsUSD)}</p>
                   {data.monthlySavingsBDT != null && (
-                    <p className="text-sm text-slate-500">≈ {bdt(data.monthlySavingsBDT)}</p>
+                    <p className="text-sm text-ink-500">≈ {bdt(data.monthlySavingsBDT)}</p>
                   )}
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 text-xs text-ink-400">
                     for {data.monthsLeft} month{data.monthsLeft !== 1 && "s"} until your deadline
                   </p>
                 </>
               ) : (
-                <p className="mt-1 text-sm text-slate-400">Set a deadline to see this</p>
+                <p className="mt-1 text-sm text-ink-400">Set a deadline to see this</p>
               )}
             </div>
           </div>
 
           {data.usdToBdt && (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-ink-400">
               Live rate: 1 USD ≈ {data.usdToBdt.toFixed(1)} BDT (open.er-api.com)
             </p>
           )}

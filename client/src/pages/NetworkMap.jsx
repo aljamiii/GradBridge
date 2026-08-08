@@ -7,7 +7,7 @@ import { getSocket } from "../lib/socket";
 import { useAuth } from "../context/AuthContext";
 
 const selectClass =
-  "rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none";
+  "rounded-lg border border-slate-300 px-3 py-2 text-sm text-ink-900 focus:border-brand-500 focus:outline-none";
 
 // Pulsing sky-blue dot marking a user who is connected right now.
 const onlineDotHtml = `<span style="position:absolute;top:-5px;right:-7px;width:12px;height:12px">
@@ -122,8 +122,8 @@ function StudentCard({ s, badge, online, onClick, onSayHi }) {
           )}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-slate-800">{s.name}</p>
-          <p className="truncate text-xs text-slate-500">
+          <p className="truncate text-sm font-medium text-ink-900">{s.name}</p>
+          <p className="truncate text-xs text-ink-500">
             {s.degreeLevel ?? "Student"}
             {s.subject ? ` in ${s.subject}` : ""}
           </p>
@@ -132,8 +132,8 @@ function StudentCard({ s, badge, online, onClick, onSayHi }) {
           <span className="ml-auto shrink-0 text-xs font-medium text-emerald-700">{badge}</span>
         )}
       </div>
-      <p className="mt-1.5 truncate text-xs text-slate-500">🎓 {s.university ?? "—"}</p>
-      <p className="truncate text-xs text-slate-400">
+      <p className="mt-1.5 truncate text-xs text-ink-500">🎓 {s.university ?? "—"}</p>
+      <p className="truncate text-xs text-ink-400">
         📍 {s.city}, {s.country}
         {localTimeAt(s.lng) && ` · 🕐 ~${localTimeAt(s.lng)}`}
       </p>
@@ -150,7 +150,7 @@ function StudentCard({ s, badge, online, onClick, onSayHi }) {
       {onSayHi && (
         <button type="button"
           onClick={(e) => { e.stopPropagation(); onSayHi(); }}
-          className="mt-2 rounded-full bg-indigo-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-indigo-700">
+          className="mt-2 rounded-full bg-brand-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-brand-700">
           👋 Say hi
         </button>
       )}
@@ -325,7 +325,7 @@ export default function NetworkMap() {
       const link = document.createElement("a");
       link.href = "#";
       link.textContent = "🧭 Explore this area →";
-      link.className = "mt-1 inline-block text-sm font-medium text-indigo-600 hover:underline";
+      link.className = "mt-1 inline-block text-sm font-medium text-brand-600 hover:underline";
       link.onclick = (e) => {
         e.preventDefault();
         // Same "most specific first" shape the Survival Guide geocodes best.
@@ -471,9 +471,9 @@ export default function NetworkMap() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-      <h1 className="text-2xl font-bold text-slate-800">🗺️ Bangladeshi Abroad Network</h1>
-      <p className="mt-1 text-slate-500">
+    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Bangladeshi Abroad Network</h1>
+      <p className="mt-1 text-ink-500">
         Find students already living where you plan to move. Are you abroad?
         Opt in from your Profile page.
       </p>
@@ -516,7 +516,7 @@ export default function NetworkMap() {
             onChange={(e) => setPlaceQ(e.target.value)}
             className={selectClass} />
           <button type="submit"
-            className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-indigo-700">
+            className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-700">
             ✈️ Go
           </button>
         </form>
@@ -526,15 +526,15 @@ export default function NetworkMap() {
           title="Colours each city by YOUR Life Compatibility Score"
           className={`rounded-lg border px-3 py-2 text-sm transition ${
             fitOn
-              ? "border-indigo-600 bg-indigo-600 text-white"
-              : "border-slate-300 bg-white text-slate-600 hover:border-indigo-400"
+              ? "border-brand-600 bg-brand-600 text-white"
+              : "border-slate-300 bg-white text-slate-600 hover:border-brand-400"
           }`}>
           🎨 Colour by my fit
         </button>
       </div>
 
       {fitOn && (
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-ink-500">
           <span>
             Pins coloured by how well each <b>city</b> suits your saved
             priorities — open a pin for its score:
@@ -557,8 +557,8 @@ export default function NetworkMap() {
             onClick={() => { setFilters({ ...filters, country: "all" }); setProbe(null); }}
             className={`rounded-full border px-3 py-1.5 text-sm transition ${
               filters.country === "all"
-                ? "border-indigo-600 bg-indigo-600 text-white"
-                : "border-slate-300 bg-white text-slate-600 hover:border-indigo-400"
+                ? "border-brand-600 bg-brand-600 text-white"
+                : "border-slate-300 bg-white text-slate-600 hover:border-brand-400"
             }`}>
             🌍 All <b>{stats.total}</b>
           </button>
@@ -574,8 +574,8 @@ export default function NetworkMap() {
               title={`${c.cities} cit${c.cities === 1 ? "y" : "ies"}`}
               className={`rounded-full border px-3 py-1.5 text-sm transition ${
                 filters.country === c.country
-                  ? "border-indigo-600 bg-indigo-600 text-white"
-                  : "border-slate-300 bg-white text-slate-600 hover:border-indigo-400"
+                  ? "border-brand-600 bg-brand-600 text-white"
+                  : "border-slate-300 bg-white text-slate-600 hover:border-brand-400"
               }`}>
               {flagOf(c.country)} {c.country} <b>{c.students}</b>
             </button>
@@ -588,22 +588,22 @@ export default function NetworkMap() {
         <div ref={mapDivRef}
           className="h-[65vh] w-full rounded-xl border border-slate-200 shadow-sm lg:flex-1" />
 
-        <aside className="flex w-full shrink-0 flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:h-[65vh] lg:w-72">
+        <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm lg:h-[65vh] lg:w-72">
           {probe ? (
             <>
-              <h2 className="flex items-center gap-2 font-semibold text-slate-800">
+              <h2 className="flex items-center gap-2 font-semibold text-ink-900">
                 📍 Near this spot
-                <span className="ml-auto text-xs font-normal text-slate-400">
+                <span className="ml-auto text-xs font-normal text-ink-400">
                   {probe.students ? `${probe.students.length} found` : "searching…"}
                 </span>
               </h2>
               <button type="button" onClick={() => setProbe(null)}
-                className="mt-1 self-start text-xs text-indigo-600 hover:underline">
+                className="mt-1 self-start text-xs text-brand-600 hover:underline">
                 ✕ Clear — back to all students
               </button>
 
               {probe.students && probe.students.length === 0 && (
-                <p className="mt-3 text-sm text-slate-400">
+                <p className="mt-3 text-sm text-ink-400">
                   No students within {PROBE_RADIUS_KM} km of that point — try
                   clicking closer to a green pin.
                 </p>
@@ -623,9 +623,9 @@ export default function NetworkMap() {
             </>
           ) : (
             <>
-              <h2 className="flex items-center gap-2 font-semibold text-slate-800">
+              <h2 className="flex items-center gap-2 font-semibold text-ink-900">
                 🎓 Students
-                <span className="ml-auto text-xs font-normal text-slate-400">
+                <span className="ml-auto text-xs font-normal text-ink-400">
                   {visible.length} shown
                   {(() => {
                     const n = visible.filter((p) => onlineIds.has(String(p.id))).length;
@@ -633,12 +633,12 @@ export default function NetworkMap() {
                   })()}
                 </span>
               </h2>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-ink-400">
                 💡 Click anywhere on the map to find students near that point.
               </p>
 
               {visible.length === 0 ? (
-                <p className="mt-3 text-sm text-slate-400">
+                <p className="mt-3 text-sm text-ink-400">
                   No students match these filters yet — try widening them, or opt in
                   from your Profile page if you're already abroad.
                 </p>
