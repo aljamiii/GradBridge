@@ -15,20 +15,39 @@ const onlineDotHtml = `<span style="position:absolute;top:-5px;right:-7px;width:
     <span style="position:absolute;inset:0;border-radius:9999px;background:#0ea5e9;border:2px solid white"></span>
   </span>`;
 
-// A small green pin as a divIcon — avoids Leaflet's bundler image issues.
-// `online` adds the live-presence dot.
-const pinIcon = (online) =>
+// A small pin as a divIcon — avoids Leaflet's bundler image issues.
+// `online` adds the live-presence dot; `color` lets the fit overlay tint it.
+const pinIcon = (online, color = "#16a34a") =>
   L.divIcon({
     className: "",
     html: `<div style="position:relative;width:22px;height:22px">
       <div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
-        background:#16a34a;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>
+        background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>
       ${online ? onlineDotHtml : ""}
     </div>`,
     iconSize: [22, 22],
     iconAnchor: [11, 22],
     popupAnchor: [0, -20],
   });
+
+// Personal-fit colour ramp for the "colour by my fit" overlay.
+const fitColor = (score) =>
+  score == null ? "#94a3b8" : score >= 70 ? "#16a34a" : score >= 50 ? "#f59e0b" : "#dc2626";
+// The compatibility engine's verdict is a sentence about the CITY ("Strong on
+// community, weak on budget."), so we always print it after "<city> scores…"
+// and lowercase it into that clause — never next to a person's name, where it
+// would read as a judgement of them.
+const verdictClause = (verdict = "") =>
+  verdict.replace(/\.$/, "").replace(/^./, (c) => c.toLowerCase());
+
+// Turn the student's SAVED profile preferences into the 0-10 priority weights
+// the compatibility endpoint expects — so the map needs no extra questions.
+const weightsFromProfile = (p = {}) => ({
+  budget: p.budgetUSD == null ? 5 : p.budgetUSD < 15000 ? 9 : p.budgetUSD < 25000 ? 6 : 4,
+  weather: p.weatherTolerance && p.weatherTolerance !== "no-preference" ? 7 : 2,
+  community: { high: 9, medium: 5, low: 2 }[p.communityPriority] ?? 5,
+  safety: 7, // everyone cares about safety; it never dominates alone
+});
 
 // Radius for "click anywhere → who's near that point" (server-side $geoNear).
 const PROBE_RADIUS_KM = 100;
@@ -59,11 +78,11 @@ const localTimeAt = (lng) => {
 
 // Cluster badge for a city with several students — a circle with the count.
 // `anyOnline` marks a cluster containing at least one connected user.
-const clusterIcon = (n, anyOnline) =>
+const clusterIcon = (n, anyOnline, color = "#16a34a") =>
   L.divIcon({
     className: "",
     html: `<div style="position:relative;width:34px;height:34px">
-      <div style="width:34px;height:34px;border-radius:50%;background:#16a34a;border:3px solid white;
+      <div style="width:34px;height:34px;border-radius:50%;background:${color};border:3px solid white;
         box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;
         color:white;font-weight:700;font-size:13px">${n}</div>
       ${anyOnline ? onlineDotHtml : ""}
@@ -82,9 +101,11 @@ const collapseIcon = L.divIcon({
   iconAnchor: [10, 10],
 });
 
-// One student profile card in the sidebar. `badge` is optional (e.g. "3.2 km");
-// `online` shows the live-presence dot; `onSayHi` (absent on your own card)
-// renders the peer-chat button. Root is a div so the inner button nests legally.
+// One student profile card in the sidebar — describes the PERSON only.
+// (City fit belongs to a place, so it lives on the pin colour and popup.)
+// `badge` is optional (e.g. "3.2 km"); `online` shows the live-presence dot;
+// `onSayHi` (absent on your own card) renders the peer-chat button.
+// Root is a div so the inner button nests legally.
 function StudentCard({ s, badge, online, onClick, onSayHi }) {
   return (
     <div role="button" tabIndex={0} onClick={onClick}
@@ -178,6 +199,30 @@ export default function NetworkMap() {
     const id = setInterval(() => setClockTick((t) => t + 1), 60_000);
     return () => clearInterval(id);
   }, []);
+
+  // 🎨 "Colour by my fit": reuse the Life Compatibility Score (Module 3) with
+  // weights derived from my saved profile, then tint each city by MY fit.
+  // The map stops looking the same for everyone.
+  const [fitOn, setFitOn] = useState(false);
+  const [fitByCity, setFitByCity] = useState(null); // "city|country" → {score, verdict}
+  useEffect(() => {
+    if (!fitOn || fitByCity) return;
+    api("/api/tools/compatibility", {
+      method: "POST",
+      body: { weights: weightsFromProfile(user?.studentProfile) },
+    })
+      .then((d) => {
+        const byCity = {};
+        for (const r of d.results) {
+          byCity[`${r.city}|${r.country}`] = { score: r.score, verdict: r.verdict };
+        }
+        setFitByCity(byCity);
+      })
+      .catch((err) => { setError(err.message); setFitOn(false); });
+  }, [fitOn, fitByCity, user]);
+
+  // Fit lookup for a pin — null when we have no rating for that city.
+  const fitOf = (p) => (fitOn ? fitByCity?.[`${p.city}|${p.country}`] ?? null : null);
 
   // Country stats (DB aggregation) → the clickable chips above the map.
   const [stats, setStats] = useState(null);
@@ -275,7 +320,8 @@ export default function NetworkMap() {
          ${p.degreeLevel ?? ""} in ${p.subject ?? "—"}<br/>
          🎓 ${p.university ?? "—"}<br/>
          📍 ${p.city}, ${p.country} · 🕐 ~${localTimeAt(p.lng)}<br/>
-         ${p.helpWith?.length ? `🤝 helps with: ${p.helpWith.join(", ")}<br/>` : ""}`;
+         ${p.helpWith?.length ? `🤝 helps with: ${p.helpWith.join(", ")}<br/>` : ""}
+         ${fitOf(p) ? `<span style="color:${fitColor(fitOf(p).score)};font-weight:600">🎨 ${p.city} scores ${fitOf(p).score}/100 for you</span> — ${verdictClause(fitOf(p).verdict)}<br/>` : ""}`;
       const link = document.createElement("a");
       link.href = "#";
       link.textContent = "🧭 Explore this area →";
@@ -296,7 +342,10 @@ export default function NetworkMap() {
 
     const addStudentPin = (p, latlng) => {
       const m = L.marker(latlng ?? [p.lat, p.lng], {
-        icon: pinIcon(onlineIds.has(String(p.id))),
+        icon: pinIcon(
+          onlineIds.has(String(p.id)),
+          fitOn ? fitColor(fitOf(p)?.score) : undefined
+        ),
       })
         .addTo(map)
         .bindPopup(popupContent(p));
@@ -349,7 +398,8 @@ export default function NetworkMap() {
         const cluster = L.marker(center, {
           icon: clusterIcon(
             members.length,
-            members.some((m) => onlineIds.has(String(m.id)))
+            members.some((m) => onlineIds.has(String(m.id))),
+            fitOn ? fitColor(fitOf(members[0])?.score) : undefined
           ),
         })
           .addTo(map)
@@ -370,7 +420,7 @@ export default function NetworkMap() {
         { maxZoom: 6 }
       );
     }
-  }, [visible, expandedCity, onlineIds, navigate]);
+  }, [visible, expandedCity, onlineIds, fitOn, fitByCity, navigate]);
 
   const countries = [...new Set(pins.map((p) => p.country))].sort();
 
@@ -471,7 +521,34 @@ export default function NetworkMap() {
           </button>
         </form>
         {placeErr && <span className="w-full text-xs text-red-500">{placeErr}</span>}
+
+        <button type="button" onClick={() => setFitOn((v) => !v)}
+          title="Colours each city by YOUR Life Compatibility Score"
+          className={`rounded-lg border px-3 py-2 text-sm transition ${
+            fitOn
+              ? "border-indigo-600 bg-indigo-600 text-white"
+              : "border-slate-300 bg-white text-slate-600 hover:border-indigo-400"
+          }`}>
+          🎨 Colour by my fit
+        </button>
       </div>
+
+      {fitOn && (
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+          <span>
+            Pins coloured by how well each <b>city</b> suits your saved
+            priorities — open a pin for its score:
+          </span>
+          {[["#16a34a", "strong fit (70+)"], ["#f59e0b", "mixed (50-69)"], ["#dc2626", "weak (<50)"], ["#94a3b8", "not rated"]].map(
+            ([c, label]) => (
+              <span key={label} className="flex items-center gap-1">
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: c }} />
+                {label}
+              </span>
+            )
+          )}
+        </div>
+      )}
 
       {/* Country chips — computed by a $group aggregation; click = filter + zoom */}
       {stats?.countries?.length > 0 && (

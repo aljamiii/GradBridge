@@ -63,7 +63,23 @@ degree, and subject.
    `$group` by country with `$sum` and `$addToSet` cities → `$size` →
    `$sort`. Rendered as clickable flag chips above the map; clicking toggles
    the country filter (map + sidebar re-zoom via the shared `visible` state).
-10. **Live presence (Map × Chat):** `socket.js` keeps a `userId → connection
+10. **"🎨 Colour by my fit" (Map × Compatibility Score):** a toggle that POSTs
+    to Module 3's `/api/tools/compatibility` with weights **derived from my
+    saved profile** (budgetUSD → budget weight, weatherTolerance → weather,
+    communityPriority → community, safety fixed at 7) — so the map asks no
+    extra questions. Pins and cluster badges are tinted green ≥70 / amber
+    50-69 / red <50 with a legend, and the score is spelled out in the pin
+    **popup** ("Vancouver scores 61/100 for you — strong on safety, weak on
+    budget"). Zero backend changes: it composes another member's endpoint.
+    The point: **the map stops looking the same for everyone** — it becomes
+    *your* map.
+    *Design note worth telling:* the score first sat on the sidebar profile
+    cards, where it read as a rating **of the student** ("weak on budget"
+    under someone's name) and repeated once per person in the same city. The
+    fit describes a **place**, so it moved to where the subject is a place —
+    the pin colour and the popup — and person cards went back to describing
+    only the person.
+11. **Live presence (Map × Chat):** `socket.js` keeps a `userId → connection
    count` Map (count, not boolean — a user can have several tabs). First
    connection broadcasts `presence:update {online:true}`, last disconnect
    broadcasts offline; late joiners fetch the list via `presence:get` (ack).
