@@ -31,7 +31,9 @@ degree, and subject.
    client-side over the fetched pins; `fitBounds` re-zooms to the filtered set.
    A **sidebar of profile cards** mirrors the filtered pins (same `visible`
    array, same order) — clicking a card `flyTo`s that student's pin and opens
-   its popup.
+   its popup. Cards and popups show **~local time** (longitude ÷ 15 ≈ UTC
+   offset — labeled "~" because real zones bend around borders/DST; good
+   enough to know whether it's 3 AM there before you say hi).
 5. **Cross-link:** each pin popup has "🧭 Explore this area →" deep-linking to
    `/survival-guide?q=<university, city, country>` (popup content is a DOM
    element, not an HTML string, so the link navigates inside the SPA). The map

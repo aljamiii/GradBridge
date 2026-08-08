@@ -42,6 +42,14 @@ const FLAGS = {
 };
 const flagOf = (country) => FLAGS[country] ?? "🌍";
 
+// Rough local time from longitude (15° ≈ 1 hour). Real timezones bend around
+// borders and DST, so it's labeled "~" — good enough for "is it night there?".
+const localTimeAt = (lng) => {
+  if (lng == null) return null;
+  const t = new Date(Date.now() + Math.round(lng / 15) * 3600e3);
+  return t.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
+};
+
 // Cluster badge for a city with several students — a circle with the count.
 // `anyOnline` marks a cluster containing at least one connected user.
 const clusterIcon = (n, anyOnline) =>
@@ -97,7 +105,10 @@ function StudentCard({ s, badge, online, onClick, onSayHi }) {
         )}
       </div>
       <p className="mt-1.5 truncate text-xs text-slate-500">🎓 {s.university ?? "—"}</p>
-      <p className="truncate text-xs text-slate-400">📍 {s.city}, {s.country}</p>
+      <p className="truncate text-xs text-slate-400">
+        📍 {s.city}, {s.country}
+        {localTimeAt(s.lng) && ` · 🕐 ~${localTimeAt(s.lng)}`}
+      </p>
       {onSayHi && (
         <button type="button"
           onClick={(e) => { e.stopPropagation(); onSayHi(); }}
@@ -141,6 +152,13 @@ export default function NetworkMap() {
     api("/api/users/network-map")
       .then((d) => setPins(d.pins))
       .catch((err) => setError(err.message));
+  }, []);
+
+  // Tick once a minute so the ~local times on cards stay current.
+  const [, setClockTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setClockTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
   }, []);
 
   // Country stats (DB aggregation) → the clickable chips above the map.
@@ -237,7 +255,7 @@ export default function NetworkMap() {
          ${onlineIds.has(String(p.id)) ? '<span style="color:#0ea5e9;font-weight:600">● online now</span><br/>' : ""}
          ${p.degreeLevel ?? ""} in ${p.subject ?? "—"}<br/>
          🎓 ${p.university ?? "—"}<br/>
-         📍 ${p.city}, ${p.country}<br/>`;
+         📍 ${p.city}, ${p.country} · 🕐 ~${localTimeAt(p.lng)}<br/>`;
       const link = document.createElement("a");
       link.href = "#";
       link.textContent = "🧭 Explore this area →";
