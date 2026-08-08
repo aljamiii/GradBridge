@@ -98,8 +98,10 @@ degree, and subject.
 
 ## 2. Real-Time Mentor & Ambassador Chat with Alerts (Module 2)
 
-**What it does:** student↔mentor chat with instant delivery, unread badges in
-the navbar, and booking events appearing in the thread as system messages.
+**What it does:** real-time chat with instant delivery, unread badges in the
+navbar, and booking events appearing in the thread as system messages.
+Student↔mentor (bookings) AND student↔student — the Network Map's sidebar
+cards have a "👋 Say hi" button that opens a peer thread.
 
 **Files:** `server/src/socket.js` · `models/Conversation.js` +
 `models/Message.js` · `controllers/chat.controller.js` ·
@@ -120,8 +122,18 @@ the navbar, and booking events appearing in the thread as system messages.
   layer ("📅 Booking request…", "✅ confirmed") without an email dependency.
 
 **Data model decisions:**
-- One Conversation per student-mentor pair, enforced by a **unique compound
-  index** `(student, mentor)`.
+- **Peer-to-peer (upgraded):** a Conversation is `participants: [two users]` —
+  originally `student`/`mentor` fields, generalized so the Network Map's
+  "👋 Say hi" can open student↔student threads. Uniqueness of the *unordered*
+  pair is enforced by a derived sorted `pairKey` ("idA:idB") with a unique
+  index — a multikey index on the array can't express that. Find-or-create is
+  an atomic `findOneAndUpdate` upsert on `pairKey`, so two simultaneous
+  "Say hi" clicks can't create two threads (the old find-then-create had that
+  race). Legacy threads were migrated by `scripts/migratePeerChat.js`, which
+  also drops the old `(student, mentor)` unique index — left in place it
+  would reject every new conversation as a duplicate `(null, null)`.
+- The inbox API returns `other` (who you're talking to) instead of
+  student/mentor slots — the UI no longer cares about roles.
 - `Message.unreadFor` holds the user id who hasn't read it; marking read =
   setting it null; unread count = `countDocuments({unreadFor: me})`. Simple
   because chats are exactly two people.

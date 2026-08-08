@@ -4,6 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { api } from "../lib/api";
 import { getSocket } from "../lib/socket";
+import { useAuth } from "../context/AuthContext";
 
 const selectClass =
   "rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none";
@@ -58,11 +59,13 @@ const collapseIcon = L.divIcon({
 });
 
 // One student profile card in the sidebar. `badge` is optional (e.g. "3.2 km");
-// `online` shows the live-presence dot on the avatar.
-function StudentCard({ s, badge, online, onClick }) {
+// `online` shows the live-presence dot; `onSayHi` (absent on your own card)
+// renders the peer-chat button. Root is a div so the inner button nests legally.
+function StudentCard({ s, badge, online, onClick, onSayHi }) {
   return (
-    <button type="button" onClick={onClick}
-      className="w-full rounded-lg border border-slate-100 bg-slate-50 p-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
+    <div role="button" tabIndex={0} onClick={onClick}
+      onKeyDown={(e) => e.key === "Enter" && onClick()}
+      className="w-full cursor-pointer rounded-lg border border-slate-100 bg-slate-50 p-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
       <div className="flex items-center gap-2.5">
         <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 font-semibold text-white">
           {s.name?.[0] ?? "?"}
@@ -86,12 +89,20 @@ function StudentCard({ s, badge, online, onClick }) {
       </div>
       <p className="mt-1.5 truncate text-xs text-slate-500">🎓 {s.university ?? "—"}</p>
       <p className="truncate text-xs text-slate-400">📍 {s.city}, {s.country}</p>
-    </button>
+      {onSayHi && (
+        <button type="button"
+          onClick={(e) => { e.stopPropagation(); onSayHi(); }}
+          className="mt-2 rounded-full bg-indigo-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-indigo-700">
+          👋 Say hi
+        </button>
+      )}
+    </div>
   );
 }
 
 export default function NetworkMap() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   // The Survival Guide's "see them on the Network Map" chip links here with
   // ?country=… so the map opens pre-filtered to that campus's country.
   const [searchParams] = useSearchParams();
@@ -310,6 +321,17 @@ export default function NetworkMap() {
 
   const countries = [...new Set(pins.map((p) => p.country))].sort();
 
+  // 👋 Say hi: open (or find) a peer conversation and jump into the thread.
+  const sayHi = async (s) => {
+    try {
+      const d = await api("/api/chat/start", { method: "POST", body: { userId: s.id } });
+      navigate(`/chat?c=${d.conversationId}`);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  const isMe = (s) => String(s.id) === String(user?.id ?? "");
+
   // Sidebar card → fly the map to that student's pin and open its popup.
   // Students hidden inside a cluster (or filtered out) have no marker yet:
   // expand their city's fan and fly there instead.
@@ -392,6 +414,7 @@ export default function NetworkMap() {
                     <li key={s.id}>
                       <StudentCard s={s} badge={`${s.distanceKm} km`}
                         online={onlineIds.has(String(s.id))}
+                        onSayHi={isMe(s) ? undefined : () => sayHi(s)}
                         onClick={() => focusStudent(s)} />
                     </li>
                   ))}
@@ -424,6 +447,7 @@ export default function NetworkMap() {
                   {visible.map((p) => (
                     <li key={p.id}>
                       <StudentCard s={p} online={onlineIds.has(String(p.id))}
+                        onSayHi={isMe(p) ? undefined : () => sayHi(p)}
                         onClick={() => focusStudent(p)} />
                     </li>
                   ))}

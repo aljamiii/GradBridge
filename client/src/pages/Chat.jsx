@@ -97,8 +97,8 @@ export default function Chat() {
     });
   };
 
-  const otherName = (c) =>
-    user.role === "mentor" ? c.student?.name : c.mentor?.name;
+  // Peer-to-peer: the API tells us who the other side is, whatever their role.
+  const otherName = (c) => c.other?.name ?? "Unknown";
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 gap-4 px-4 py-8">
@@ -107,7 +107,9 @@ export default function Chat() {
         <h1 className="mb-3 text-lg font-bold text-slate-800">💬 Chats</h1>
         {conversations.length === 0 ? (
           <p className="text-sm text-slate-400">
-            No conversations yet{user.role === "student" && " — message a mentor to start one"}.
+            No conversations yet
+            {user.role === "student" &&
+              " — message a mentor, or say hi to a student on the Network Map"}.
           </p>
         ) : (
           <div className="space-y-1">

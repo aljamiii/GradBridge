@@ -57,8 +57,7 @@ export const initSocket = (httpServer) => {
     socket.on("convo:join", async (conversationId) => {
       const convo = await Conversation.findById(conversationId).catch(() => null);
       const mine =
-        convo &&
-        [String(convo.student), String(convo.mentor)].includes(String(socket.userId));
+        convo && convo.participants.map(String).includes(String(socket.userId));
       if (mine) socket.join(`convo:${conversationId}`);
     });
 
@@ -74,8 +73,7 @@ export const initSocket = (httpServer) => {
 
         const convo = await Conversation.findById(conversationId);
         const mine =
-          convo &&
-          [String(convo.student), String(convo.mentor)].includes(String(socket.userId));
+          convo && convo.participants.map(String).includes(String(socket.userId));
         if (!mine) return ack?.({ error: "Not your conversation." });
 
         // Lazy import avoids a circular dependency at module load time.
