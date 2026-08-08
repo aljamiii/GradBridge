@@ -321,6 +321,23 @@ export default function NetworkMap() {
 
   const countries = [...new Set(pins.map((p) => p.country))].sort();
 
+  // ✈️ Fly-to search: geocode a typed place, fly there, run the radius probe.
+  const [placeQ, setPlaceQ] = useState("");
+  const [placeErr, setPlaceErr] = useState("");
+  const flyToPlace = async (e) => {
+    e.preventDefault();
+    const q = placeQ.trim();
+    if (!q) return;
+    setPlaceErr("");
+    try {
+      const d = await api(`/api/users/network-map/geocode?q=${encodeURIComponent(q)}`);
+      mapRef.current?.flyTo([d.lat, d.lng], 7, { duration: 1 });
+      setProbe({ lat: d.lat, lng: d.lng }); // draws the circle + runs $geoNear
+    } catch (err) {
+      setPlaceErr(err.message);
+    }
+  };
+
   // 👋 Say hi: open (or find) a peer conversation and jump into the thread.
   const sayHi = async (s) => {
     try {
@@ -381,6 +398,18 @@ export default function NetworkMap() {
         <input value={filters.subject} placeholder="Filter by subject…"
           onChange={(e) => setFilters({ ...filters, subject: e.target.value })}
           className={selectClass} />
+
+        {/* Fly-to search: think in city names, not clicks */}
+        <form onSubmit={flyToPlace} className="ml-auto flex items-center gap-2">
+          <input value={placeQ} placeholder='Fly to a city… (e.g., "Frankfurt")'
+            onChange={(e) => setPlaceQ(e.target.value)}
+            className={selectClass} />
+          <button type="submit"
+            className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-indigo-700">
+            ✈️ Go
+          </button>
+        </form>
+        {placeErr && <span className="w-full text-xs text-red-500">{placeErr}</span>}
       </div>
 
       {/* Map + a sidebar of profile cards mirroring the current filters */}
@@ -392,7 +421,7 @@ export default function NetworkMap() {
           {probe ? (
             <>
               <h2 className="flex items-center gap-2 font-semibold text-slate-800">
-                📍 Near your click
+                📍 Near this spot
                 <span className="ml-auto text-xs font-normal text-slate-400">
                   {probe.students ? `${probe.students.length} found` : "searching…"}
                 </span>

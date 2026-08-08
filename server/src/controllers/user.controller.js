@@ -1,7 +1,7 @@
 // CONTROLLER: profile management (FR #3) + network-map queries.
 // The logged-in user updates their own role-specific profile.
 import User from "../models/User.js";
-import { geocodePlace } from "../services/geocode.js";
+import { geocode, geocodePlace } from "../services/geocode.js";
 
 // Shape the user object we send back (same as auth controller).
 const publicUser = (user) => ({
@@ -101,6 +101,27 @@ export const getNetworkMap = async (req, res, next) => {
         };
       }),
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/users/network-map/geocode?q=  — resolve a typed place name so the
+// map can fly there and run the radius probe. Proxies Nominatim through the
+// cached geocode service (API pattern: keys/CORS/caching all server-side).
+export const geocodeSearch = async (req, res, next) => {
+  try {
+    const q = (req.query.q || "").trim();
+    if (q.length < 2) {
+      return res.status(400).json({ success: false, message: "Type a place to search." });
+    }
+    const hit = await geocode(q);
+    if (!hit) {
+      return res
+        .status(404)
+        .json({ success: false, message: `Couldn't find "${q}" — try "city, country".` });
+    }
+    res.json({ success: true, lat: hit.lat, lng: hit.lng });
   } catch (err) {
     next(err);
   }

@@ -40,10 +40,11 @@ degree, and subject.
    halves of one journey: find your people, then learn their neighbourhood.
 6. **Geospatial endpoint (mine):** `GET /api/users/network-map/nearby?lat=&lng=`
    powers the Survival Guide's green map pins and summary line.
-7. **Radius search:** clicking anywhere on the map draws a 25 km circle and
-   asks that same endpoint who's inside it — the sidebar flips to "Near your
-   click" with per-student distance badges. One `$geoNear` endpoint, two
-   consumers (Survival Guide cross-link + interactive map probe).
+7. **Radius search:** clicking anywhere on the map — or typing a city into
+   the ✈️ fly-to box (geocoded server-side via the cached Nominatim service)
+   — draws a 100 km circle and asks that same endpoint who's inside it; the
+   sidebar flips to "Near this spot" with per-student distance badges. One
+   `$geoNear` endpoint, two consumers (Survival Guide cross-link + map probe).
 8. **City clustering (hand-rolled, no plugin):** pins are grouped by
    `city|country`; a multi-student city renders one green count badge.
    Clicking it flies in and **spider-fans** the members around the city
