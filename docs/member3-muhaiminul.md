@@ -20,7 +20,11 @@ degree, and subject.
 `scripts/backfillGeoPoints.js`
 
 **Flow:**
-1. Profile page has an opt-in checkbox + city/country/university/degree/subject.
+1. Profile page has an opt-in checkbox + city/country/university/degree/subject
+   + **"I can help newcomers with…"** toggle chips (visa · housing · funding ·
+   part-time jobs · admissions · settling in). Fixed vocabulary (a model
+   `enum`, mirrored as a constant on both pages) — free text couldn't be
+   filtered reliably.
 2. On save, IF the location changed (or was never geocoded), the server calls
    **Nominatim** (`geocodePlace`): try "university, city, country" first, fall
    back to "city, country". Results cached per query; identified User-Agent;
@@ -87,6 +91,10 @@ degree, and subject.
   if that fails too → coords null → not plotted, profile intact (fail-soft).
 - *Why filter client-side?* Dozens of pins — refetching per filter would be
   wasteful; the data is already in memory.
+- *What does "can help with" change?* It turns a directory into a help
+  marketplace: the map answers "**who near Toronto can help with housing?**",
+  which is the question a student actually has. It's also why "Say hi" has a
+  reason attached — you message someone who already offered that help.
 - *How does the "students near this campus" chip know who's nearby?* It calls
   MY endpoint: `$geoNear` on the 2dsphere index over `abroad.location`. The
   DB computes great-circle distances from the index and returns sorted

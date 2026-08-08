@@ -56,6 +56,16 @@ const userSchema = new mongoose.Schema(
         university: String,
         degreeLevel: { type: String, enum: ["Bachelors", "Masters", "PhD"] },
         subject: String, // e.g., "Computer Science"
+        // What this student is happy to help newcomers with — powers the
+        // map's "who can help with X" filter. Fixed vocabulary so it's
+        // filterable (free text wouldn't be).
+        helpWith: {
+          type: [{
+            type: String,
+            enum: ["visa", "housing", "funding", "part-time jobs", "admissions", "settling in"],
+          }],
+          default: [],
+        },
         lat: Number, // geocoded server-side via Nominatim
         lng: Number,
         // The same coordinates as GeoJSON, so the 2dsphere index below can

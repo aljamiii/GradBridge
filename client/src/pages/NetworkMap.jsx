@@ -42,6 +42,13 @@ const FLAGS = {
 };
 const flagOf = (country) => FLAGS[country] ?? "🌍";
 
+// "Can help with" vocabulary — must match the User model enum.
+const HELP_TOPICS = ["visa", "housing", "funding", "part-time jobs", "admissions", "settling in"];
+const HELP_ICONS = {
+  visa: "🛂", housing: "🏠", funding: "💰",
+  "part-time jobs": "💼", admissions: "🎓", "settling in": "🧭",
+};
+
 // Rough local time from longitude (15° ≈ 1 hour). Real timezones bend around
 // borders and DST, so it's labeled "~" — good enough for "is it night there?".
 const localTimeAt = (lng) => {
@@ -109,6 +116,16 @@ function StudentCard({ s, badge, online, onClick, onSayHi }) {
         📍 {s.city}, {s.country}
         {localTimeAt(s.lng) && ` · 🕐 ~${localTimeAt(s.lng)}`}
       </p>
+      {s.helpWith?.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {s.helpWith.map((t) => (
+            <span key={t}
+              className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+              {HELP_ICONS[t] ?? "🤝"} {t}
+            </span>
+          ))}
+        </div>
+      )}
       {onSayHi && (
         <button type="button"
           onClick={(e) => { e.stopPropagation(); onSayHi(); }}
@@ -132,6 +149,7 @@ export default function NetworkMap() {
     country: searchParams.get("country") ?? "all",
     degreeLevel: "all",
     subject: "",
+    helpWith: "all",
   });
 
   const mapDivRef = useRef(null);   // the <div> Leaflet renders into
@@ -229,13 +247,14 @@ export default function NetworkMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [probe?.lat, probe?.lng]);
 
-  // Spec: filterable by country, degree, and subject.
+  // Spec: filterable by country, degree, and subject (+ "can help with").
   const visible = useMemo(
     () =>
       pins.filter(
         (p) =>
           (filters.country === "all" || p.country === filters.country) &&
           (filters.degreeLevel === "all" || p.degreeLevel === filters.degreeLevel) &&
+          (filters.helpWith === "all" || p.helpWith?.includes(filters.helpWith)) &&
           (!filters.subject ||
             p.subject?.toLowerCase().includes(filters.subject.toLowerCase()))
       ),
@@ -255,7 +274,8 @@ export default function NetworkMap() {
          ${onlineIds.has(String(p.id)) ? '<span style="color:#0ea5e9;font-weight:600">● online now</span><br/>' : ""}
          ${p.degreeLevel ?? ""} in ${p.subject ?? "—"}<br/>
          🎓 ${p.university ?? "—"}<br/>
-         📍 ${p.city}, ${p.country} · 🕐 ~${localTimeAt(p.lng)}<br/>`;
+         📍 ${p.city}, ${p.country} · 🕐 ~${localTimeAt(p.lng)}<br/>
+         ${p.helpWith?.length ? `🤝 helps with: ${p.helpWith.join(", ")}<br/>` : ""}`;
       const link = document.createElement("a");
       link.href = "#";
       link.textContent = "🧭 Explore this area →";
@@ -431,6 +451,14 @@ export default function NetworkMap() {
         <input value={filters.subject} placeholder="Filter by subject…"
           onChange={(e) => setFilters({ ...filters, subject: e.target.value })}
           className={selectClass} />
+        <select value={filters.helpWith}
+          onChange={(e) => setFilters({ ...filters, helpWith: e.target.value })}
+          className={selectClass}>
+          <option value="all">Can help with…</option>
+          {HELP_TOPICS.map((t) => (
+            <option key={t} value={t}>{HELP_ICONS[t]} {t}</option>
+          ))}
+        </select>
 
         {/* Fly-to search: think in city names, not clicks */}
         <form onSubmit={flyToPlace} className="ml-auto flex items-center gap-2">

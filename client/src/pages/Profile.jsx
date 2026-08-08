@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
+// What an abroad student can offer newcomers — must match the User model enum.
+const HELP_TOPICS = ["visa", "housing", "funding", "part-time jobs", "admissions", "settling in"];
+
 // Shared input styling
 const inputClass =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none";
@@ -36,9 +39,18 @@ function StudentForm({ user, onSave, saving }) {
     abroadUniversity: a.university ?? "",
     abroadDegreeLevel: a.degreeLevel ?? "Masters",
     abroadSubject: a.subject ?? "",
+    abroadHelpWith: a.helpWith ?? [],
   });
 
   const set = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const toggleHelp = (topic) =>
+    setForm((f) => ({
+      ...f,
+      abroadHelpWith: f.abroadHelpWith.includes(topic)
+        ? f.abroadHelpWith.filter((t) => t !== topic)
+        : [...f.abroadHelpWith, topic],
+    }));
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -62,6 +74,7 @@ function StudentForm({ user, onSave, saving }) {
           university: form.abroadUniversity,
           degreeLevel: form.abroadDegreeLevel,
           subject: form.abroadSubject,
+          helpWith: form.abroadHelpWith,
         },
       },
     });
@@ -160,6 +173,26 @@ function StudentForm({ user, onSave, saving }) {
             <input name="abroadSubject" value={form.abroadSubject} onChange={set}
               placeholder="Computer Science" className={inputClass} />
           </Field>
+          <div className="sm:col-span-2">
+            <span className="mb-1 block text-sm font-medium text-slate-600">
+              I can help newcomers with… (shown on your map card)
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {HELP_TOPICS.map((topic) => {
+                const on = form.abroadHelpWith.includes(topic);
+                return (
+                  <button key={topic} type="button" onClick={() => toggleHelp(topic)}
+                    className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                      on
+                        ? "border-amber-500 bg-amber-50 text-amber-700"
+                        : "border-slate-300 bg-white text-slate-500 hover:border-amber-400"
+                    }`}>
+                    {on ? "✓ " : ""}{topic}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
