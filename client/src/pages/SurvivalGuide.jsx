@@ -1,1115 +1,259 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { api } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 
 const CATEGORIES = {
-  mosques: {
-    label: "Mosques",
-    shortLabel: "Mosques",
-    emoji: "🕌",
-    color: "#16a34a",
-    description: "Muslim places of worship near campus",
-  },
-
-  halal: {
-    label: "Halal Food & Groceries",
-    shortLabel: "Halal",
-    emoji: "🥘",
-    color: "#ea580c",
-    description: "Halal food and grocery options",
-  },
-
-  hospitals: {
-    label: "Hospitals",
-    shortLabel: "Healthcare",
-    emoji: "🏥",
-    color: "#dc2626",
-    description: "Hospitals near your university",
-  },
-
-  transit: {
-    label: "Transit Stops",
-    shortLabel: "Transit",
-    emoji: "🚇",
-    color: "#2563eb",
-    description: "Nearby public transportation",
-  },
+  mosques: { label: "Mosques", emoji: "🕌", color: "#16a34a" },
+  halal: { label: "Halal Food & Groceries", emoji: "🥘", color: "#ea580c" },
+  hospitals: { label: "Hospitals", emoji: "🏥", color: "#dc2626" },
+  transit: { label: "Transit Stops", emoji: "🚇", color: "#2563eb" },
 };
 
-const createDotIcon = (color) =>
+const dot = (color) =>
   L.divIcon({
     className: "",
-    html: `
-      <div
-        style="
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: ${color};
-          border: 3px solid white;
-          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
-        "
-      ></div>
-    `,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};
+      border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.5)"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
   });
 
 const campusIcon = L.divIcon({
   className: "",
-  html: `
-    <div
-      style="
-        width: 38px;
-        height: 38px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
-        background: #4f46e5;
-        border: 3px solid white;
-        color: white;
-        font-size: 20px;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
-      "
-    >
-      🎓
-    </div>
-  `,
-  iconSize: [38, 38],
-  iconAnchor: [19, 19],
+  html: `<div style="font-size:26px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))">🎓</div>`,
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
 });
 
-function createPopup({
-  emoji,
-  name,
-  distanceKm,
-  detail,
-  campus = false,
-}) {
-  const wrapper = document.createElement("div");
-
-  const title = document.createElement("strong");
-
-  title.textContent = campus
-    ? `🎓 ${name}`
-    : `${emoji} ${name}`;
-
-  wrapper.appendChild(title);
-
-  if (campus) {
-    const subtitle = document.createElement("div");
-
-    subtitle.textContent = "University campus";
-    subtitle.style.marginTop = "4px";
-    subtitle.style.color = "#64748b";
-
-    wrapper.appendChild(subtitle);
-
-    return wrapper;
-  }
-
-  const distance = document.createElement("div");
-
-  distance.textContent = `${distanceKm} km from campus`;
-  distance.style.marginTop = "5px";
-
-  wrapper.appendChild(distance);
-
-  if (detail) {
-    const detailElement = document.createElement("div");
-
-    detailElement.textContent = detail;
-    detailElement.style.marginTop = "4px";
-    detailElement.style.color = "#64748b";
-
-    wrapper.appendChild(detailElement);
-  }
-
-  return wrapper;
-}
+// Same green teardrop as the Network Map — "a GradBridge person lives here".
+const studentPin = L.divIcon({
+  className: "",
+  html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+    background:#16a34a;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,
+  iconSize: [22, 22],
+  iconAnchor: [11, 22],
+  popupAnchor: [0, -20],
+});
 
 export default function SurvivalGuide() {
-  const [query, setQuery] = useState("");
+  const { user } = useAuth();
+  const [q, setQ] = useState("");
   const [result, setResult] = useState(null);
-
-  const [favorites, setFavorites] = useState([]);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [selectedCategory, setSelectedCategory] =
-    useState("all");
-
   const mapDivRef = useRef(null);
   const mapRef = useRef(null);
-  const layerRef = useRef(null);
+  const layerRef = useRef(null); // group holding amenity markers
+  const studentLayerRef = useRef(null); // group holding nearby-student pins
 
-  const markerRefs = useRef(new Map());
-
-  /*
-    Create Leaflet map once.
-  */
+  // Create the map once.
   useEffect(() => {
-    if (
-      mapRef.current ||
-      !mapDivRef.current
-    ) {
-      return;
-    }
-
-    const map = L.map(
-      mapDivRef.current
-    ).setView(
-      [23.8103, 90.4125],
-      3
-    );
-
-    L.tileLayer(
-      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-      {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-
-        maxZoom: 18,
-      }
-    ).addTo(map);
-
-    layerRef.current =
-      L.layerGroup().addTo(map);
-
+    if (mapRef.current || !mapDivRef.current) return;
+    const map = L.map(mapDivRef.current).setView([23.78, 90.4], 3); // Dhaka-ish start
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 18,
+    }).addTo(map);
+    layerRef.current = L.layerGroup().addTo(map);
+    studentLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
-
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 100);
-
-    return () => {
-      map.remove();
-
-      mapRef.current = null;
-      layerRef.current = null;
-
-      markerRefs.current.clear();
-    };
   }, []);
 
-  /*
-    Existing favorites functionality.
-  */
+  // Redraw markers whenever a new result arrives.
   useEffect(() => {
-    api("/api/favorites")
-      .then((data) => {
-        setFavorites(
-          data.favorites ?? []
-        );
-      })
-      .catch(() => {});
-  }, []);
-
-  /*
-    Create one combined list for UI filtering.
-  */
-  const visiblePlaces =
-    useMemo(() => {
-      if (!result?.places) {
-        return [];
-      }
-
-      if (
-        selectedCategory === "all"
-      ) {
-        return Object.entries(
-          result.places
-        ).flatMap(
-          ([category, places]) =>
-            (places ?? []).map(
-              (place, index) => ({
-                ...place,
-
-                category,
-
-                markerKey:
-                  `${category}-${index}`,
-              })
-            )
-        );
-      }
-
-      return (
-        result.places[
-          selectedCategory
-        ] ?? []
-      ).map(
-        (place, index) => ({
-          ...place,
-
-          category:
-            selectedCategory,
-
-          markerKey:
-            `${selectedCategory}-${index}`,
-        })
-      );
-    }, [
-      result,
-      selectedCategory,
-    ]);
-
-  /*
-    Redraw map when search/category changes.
-  */
-  useEffect(() => {
-    const map =
-      mapRef.current;
-
-    const layer =
-      layerRef.current;
-
-    if (
-      !map ||
-      !layer ||
-      !result
-    ) {
-      return;
-    }
+    const map = mapRef.current;
+    const layer = layerRef.current;
+    if (!map || !layer || !result) return;
 
     layer.clearLayers();
 
-    markerRefs.current.clear();
+    L.marker([result.center.lat, result.center.lng], { icon: campusIcon })
+      .addTo(layer)
+      .bindPopup(`<strong>${result.query}</strong><br/>your campus`);
 
-    const campusMarker =
-      L.marker(
-        [
-          result.center.lat,
-          result.center.lng,
-        ],
-        {
-          icon: campusIcon,
-        }
-      )
+    const bounds = [[result.center.lat, result.center.lng]];
+    for (const [key, cat] of Object.entries(CATEGORIES)) {
+      for (const p of result.places[key] ?? []) {
+        L.marker([p.lat, p.lng], { icon: dot(cat.color) })
+          .addTo(layer)
+          .bindPopup(
+            `${cat.emoji} <strong>${p.name}</strong><br/>${p.distanceKm} km away${
+              p.detail ? `<br/>${p.detail}` : ""
+            }`
+          );
+        bounds.push([p.lat, p.lng]);
+      }
+    }
+
+    // Re-measure the container before zooming — cures white/unrendered tiles
+    // if anything about the layout shifted since the map was created.
+    map.invalidateSize();
+    map.fitBounds(L.latLngBounds(bounds).pad(0.15), { maxZoom: 15 });
+  }, [result]);
+
+  const search = async (e, preset) => {
+    e?.preventDefault();
+    const query = (preset ?? q).trim();
+    if (!query) return;
+    setLoading(true);
+    setError("");
+    try {
+      const data = await api(`/api/survival-guide?q=${encodeURIComponent(query)}`);
+      setResult(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Deep link from the Network Map: /survival-guide?q=… auto-runs the search.
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const qp = searchParams.get("q");
+    if (qp) {
+      setQ(qp);
+      search(null, qp);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cross-link back: ask the network map's geospatial endpoint which
+  // GradBridge students live near this campus (server-side $geoNear —
+  // matched by distance, not name, and it excludes the current user).
+  const [nearby, setNearby] = useState([]);
+  useEffect(() => {
+    if (!result) return;
+    setNearby([]);
+    api(
+      `/api/users/network-map/nearby?lat=${result.center.lat}&lng=${result.center.lng}&radiusKm=10`
+    )
+      .then((d) => setNearby(d.students ?? []))
+      .catch(() => {}); // enrichment only — never block the guide itself
+  }, [result]);
+
+  // Plot the nearby students on the map with the Network Map's green pin,
+  // so "your people" appear right next to the mosques and halal shops.
+  useEffect(() => {
+    const layer = studentLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    for (const s of nearby) {
+      if (s.lat == null || s.lng == null) continue;
+      L.marker([s.lat, s.lng], { icon: studentPin })
         .addTo(layer)
         .bindPopup(
-          createPopup({
-            name: result.query,
-            campus: true,
-          })
+          `<strong>${s.name}</strong><br/>
+           ${s.degreeLevel ?? "Student"}${s.subject ? ` in ${s.subject}` : ""}<br/>
+           🎓 ${s.university ?? "—"}<br/>
+           ~${s.distanceKm} km from campus`
         );
-
-    const bounds = [
-      [
-        result.center.lat,
-        result.center.lng,
-      ],
-    ];
-
-    visiblePlaces.forEach(
-      (place) => {
-        const category =
-          CATEGORIES[
-            place.category
-          ];
-
-        const marker =
-          L.marker(
-            [
-              place.lat,
-              place.lng,
-            ],
-            {
-              icon:
-                createDotIcon(
-                  category.color
-                ),
-            }
-          )
-            .addTo(layer)
-            .bindPopup(
-              createPopup({
-                emoji:
-                  category.emoji,
-
-                name:
-                  place.name,
-
-                distanceKm:
-                  place.distanceKm,
-
-                detail:
-                  place.detail,
-              })
-            );
-
-        markerRefs.current.set(
-          place.markerKey,
-          marker
-        );
-
-        bounds.push([
-          place.lat,
-          place.lng,
-        ]);
-      }
-    );
-
-    map.invalidateSize();
-
-    if (bounds.length > 1) {
-      map.fitBounds(
-        L.latLngBounds(
-          bounds
-        ).pad(0.18),
-        {
-          maxZoom: 15,
-        }
-      );
-    } else {
-      map.setView(
-        [
-          result.center.lat,
-          result.center.lng,
-        ],
-        14
-      );
-
-      campusMarker.openPopup();
     }
-  }, [
-    result,
-    visiblePlaces,
-  ]);
+  }, [nearby]);
 
-  /*
-    Search existing backend.
-  */
-  const search =
-    async (
-      event,
-      preset
-    ) => {
-      event?.preventDefault();
-
-      const value =
-        (
-          preset ??
-          query
-        ).trim();
-
-      if (value.length < 3) {
-        setError(
-          "Enter a university name or address."
-        );
-
-        return;
-      }
-
-      setLoading(true);
-      setError("");
-
-      setSelectedCategory(
-        "all"
-      );
-
-      try {
-        const data =
-          await api(
-            `/api/survival-guide?q=${encodeURIComponent(
-              value
-            )}`
-          );
-
-        setResult(data);
-      } catch (err) {
-        setResult(null);
-
-        setError(
-          err.message ||
-            "Unable to retrieve nearby places."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-  /*
-    Existing favorite shortcut.
-  */
-  const searchFavorite =
-    (
-      event,
-      favorite
-    ) => {
-      const value =
-        [
-          favorite.name,
-          favorite.country,
-        ]
-          .filter(Boolean)
-          .join(", ");
-
-      setQuery(value);
-
-      search(
-        event,
-        value
-      );
-    };
-
-  /*
-    List item → corresponding marker.
-  */
-  const focusPlace =
-    (place) => {
-      const map =
-        mapRef.current;
-
-      if (!map) {
-        return;
-      }
-
-      map.flyTo(
-        [
-          place.lat,
-          place.lng,
-        ],
-        17,
-        {
-          duration: 0.7,
-        }
-      );
-
-      const marker =
-        markerRefs.current.get(
-          place.markerKey
-        );
-
-      marker?.openPopup();
-    };
+  // One-click shortcut using the student's saved favorites.
+  const [favorites, setFavorites] = useState([]);
+  useEffect(() => {
+    api("/api/favorites").then((d) => setFavorites(d.favorites)).catch(() => {});
+  }, []);
 
   return (
-    <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      <h1 className="text-2xl font-bold text-slate-800">🧭 Housing & Survival Guide</h1>
+      <p className="mt-1 text-slate-500">
+        Everything you need near campus before you even land: mosques, halal food,
+        hospitals, and transit — sorted by distance.
+      </p>
 
-      {/* PAGE HEADER */}
+      <form onSubmit={search} className="mt-5 flex flex-wrap gap-2">
+        <input value={q} onChange={(e) => setQ(e.target.value)}
+          placeholder='University or address (e.g., "University of Toronto, Canada")'
+          className="min-w-64 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none" />
+        <button type="submit" disabled={loading}
+          className="rounded-lg bg-indigo-600 px-5 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          {loading ? "Searching…" : "Explore"}
+        </button>
+      </form>
 
-      <section className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-6 sm:p-8">
-
-        <div className="relative z-10 max-w-3xl">
-
-          <span className="inline-flex items-center rounded-full border border-indigo-200 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">
-            Student Life
-          </span>
-
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-            Housing & Survival Guide
-          </h1>
-
-          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-            Understand what daily life looks
-            like around your future campus.
-            Discover nearby mosques, halal
-            food, hospitals, and public
-            transport before you arrive.
-          </p>
-
-        </div>
-
-
-        <div className="pointer-events-none absolute -right-10 -top-12 hidden text-[150px] opacity-[0.07] sm:block">
-          🧭
-        </div>
-
-      </section>
-
-
-      {/* SEARCH CARD */}
-
-      <section className="relative z-20 mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-200/40 sm:p-5">
-        <form
-          onSubmit={search}
-        >
-
-          <label
-            htmlFor="survival-search"
-            className="mb-2 block text-sm font-semibold text-slate-700"
-          >
-            Where are you planning to study?
-          </label>
-
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-
-            <div className="relative flex-1">
-
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                🔎
-              </span>
-
-
-              <input
-                id="survival-search"
-                value={query}
-                onChange={(event) =>
-                  setQuery(
-                    event.target.value
-                  )
-                }
-                placeholder="University of Toronto, Toronto, Canada"
-                className="w-full rounded-xl border border-slate-300 bg-slate-50 py-3 pl-11 pr-4 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100"
-              />
-
-            </div>
-
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-xl bg-indigo-600 px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-indigo-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading
-                ? "Searching..."
-                : "Explore Nearby"}
+      {favorites.length > 0 && !result && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {favorites.slice(0, 4).map((f) => (
+            <button key={f._id} onClick={(e) => { setQ(`${f.name}, ${f.country ?? ""}`); search(e, `${f.name}, ${f.country ?? ""}`); }}
+              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-600 hover:border-indigo-400 hover:text-indigo-600">
+              ★ {f.name}
             </button>
-
-          </div>
-
-
-          <p className="mt-2 text-xs text-slate-400">
-            Include city and country for
-            more accurate results.
-          </p>
-
-        </form>
-
-      </section>
-
-
-      {/* FAVORITES */}
-
-      {favorites.length > 0 &&
-        !result && (
-          <section className="mt-6">
-
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-              Quick search from saved universities
-            </p>
-
-
-            <div className="flex flex-wrap gap-2">
-
-              {favorites
-                .slice(0, 4)
-                .map(
-                  (favorite) => (
-
-                    <button
-                      key={
-                        favorite._id
-                      }
-                      type="button"
-                      onClick={(
-                        event
-                      ) =>
-                        searchFavorite(
-                          event,
-                          favorite
-                        )
-                      }
-                      className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-300 hover:text-indigo-600 hover:shadow"
-                    >
-                      ★{" "}
-                      {
-                        favorite.name
-                      }
-                    </button>
-
-                  )
-                )}
-
-            </div>
-
-          </section>
-        )}
-
-
-      {/* ERROR */}
+          ))}
+        </div>
+      )}
 
       {error && (
-        <section className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4">
-
-          <div className="flex gap-3">
-
-            <div className="text-xl">
-              ⚠️
-            </div>
-
-            <div>
-              <p className="font-semibold text-red-800">
-                Unable to load nearby facilities
-              </p>
-
-              <p className="mt-1 text-sm text-red-700">
-                {error}
-              </p>
-            </div>
-
-          </div>
-
-        </section>
+        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
-
-      {/* INITIAL STATE */}
-
-      {!result &&
-        !error && (
-          <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-
-            {Object.entries(
-              CATEGORIES
-            ).map(
-              ([
-                key,
-                category,
-              ]) => (
-
-                <div
-                  key={key}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                >
-
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-2xl">
-                    {
-                      category.emoji
-                    }
-                  </div>
-
-                  <h2 className="mt-4 font-semibold text-slate-800">
-                    {
-                      category.shortLabel
-                    }
-                  </h2>
-
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    {
-                      category.description
-                    }
-                  </p>
-
-                </div>
-
-              )
-            )}
-
-          </section>
-        )}
-
-
-      {/* CAMPUS INFO */}
-
-      {result && (
-        <section className="mt-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-
-          <div className="flex items-start gap-4">
-
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-xl">
-              🎓
-            </div>
-
-
-            <div>
-
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Selected campus
-              </p>
-
-              <h2 className="mt-1 font-semibold text-slate-900">
-                {
-                  result.query
-                }
-              </h2>
-
-              <p className="mt-1 text-xs text-slate-400">
-                {Number(
-                  result.center.lat
-                ).toFixed(5)}
-                ,{" "}
-                {Number(
-                  result.center.lng
-                ).toFixed(5)}
-              </p>
-
-            </div>
-
-          </div>
-
-
-          <span
-            className={`w-fit rounded-full px-3 py-1.5 text-xs font-semibold ${
-              result.cached
-                ? "bg-amber-50 text-amber-700"
-                : "bg-emerald-50 text-emerald-700"
-            }`}
+      {result && nearby.length > 0 && (
+        <div className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          🎓 {nearby.length} GradBridge student{nearby.length !== 1 && "s"} near this
+          campus — green pin{nearby.length !== 1 && "s"} on the map.{" "}
+          <Link
+            to={`/network-map?country=${encodeURIComponent(nearby[0]?.country ?? "")}`}
+            className="font-medium text-emerald-700 underline hover:text-emerald-900"
           >
-            {result.cached
-              ? "Cached result"
-              : "Live map result"}
-          </span>
-
-        </section>
-      )}
-
-
-      {/* SUMMARY CARDS */}
-
-      {result && (
-        <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-
-          {Object.entries(
-            CATEGORIES
-          ).map(
-            ([
-              key,
-              category,
-            ]) => {
-
-              const items =
-                result.places[
-                  key
-                ] ?? [];
-
-              const selected =
-                selectedCategory ===
-                key;
-
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() =>
-                    setSelectedCategory(
-                      key
-                    )
-                  }
-                  className={`group rounded-2xl border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-                    selected
-                      ? "border-indigo-500 ring-4 ring-indigo-50"
-                      : "border-slate-200 hover:border-indigo-200"
-                  }`}
-                >
-
-                  <div className="flex items-start justify-between gap-3">
-
-                    <div
-                      className="flex h-11 w-11 items-center justify-center rounded-xl text-xl"
-                      style={{
-                        backgroundColor:
-                          `${category.color}12`,
-                      }}
-                    >
-                      {
-                        category.emoji
-                      }
-                    </div>
-
-
-                    <span className="text-3xl font-bold tracking-tight text-slate-900">
-                      {
-                        items.length
-                      }
-                    </span>
-
-                  </div>
-
-
-                  <p className="mt-3 font-semibold text-slate-800">
-                    {
-                      category.shortLabel
-                    }
-                  </p>
-
-                  <p className="mt-1 text-xs text-slate-400">
-                    Showing closest mapped places
-                  </p>
-
-                </button>
-              );
-            }
-          )}
-
-        </section>
-      )}
-
-
-      {/* FILTERS */}
-
-      {result && (
-        <section className="mt-6 flex flex-wrap gap-2">
-
-          <button
-            type="button"
-            onClick={() =>
-              setSelectedCategory(
-                "all"
-              )
-            }
-            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-              selectedCategory ===
-              "all"
-                ? "bg-slate-900 text-white shadow-sm"
-                : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-            }`}
-          >
-            All
-          </button>
-
-
-          {Object.entries(
-            CATEGORIES
-          ).map(
-            ([
-              key,
-              category,
-            ]) => (
-
-              <button
-                key={key}
-                type="button"
-                onClick={() =>
-                  setSelectedCategory(
-                    key
-                  )
-                }
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  selectedCategory ===
-                  key
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                {
-                  category.emoji
-                }{" "}
-                {
-                  category.shortLabel
-                }
-              </button>
-
-            )
-          )}
-
-        </section>
-      )}
-
-
-      {/* MAP + LIST */}
-
-      <section
-        className={`mt-5 grid gap-5 ${
-          result
-            ? "lg:grid-cols-[minmax(0,1.45fr)_minmax(300px,.75fr)]"
-            : ""
-        }`}
-      >
-
-        {/* MAP */}
-
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-
-          <div
-            ref={mapDivRef}
-            className="h-[56vh] min-h-[430px] w-full overflow-hidden rounded-xl"
-          />
-
+            See their profiles on the Network Map →
+          </Link>
         </div>
-
-
-        {/* LIST */}
-
-        {result && (
-          <aside className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-
-            <div className="border-b border-slate-100 p-5">
-
-              <div className="flex items-start justify-between gap-3">
-
-                <div>
-
-                  <h2 className="font-semibold text-slate-900">
-                    {selectedCategory ===
-                    "all"
-                      ? "Nearby Essentials"
-                      : CATEGORIES[
-                          selectedCategory
-                        ].label}
-                  </h2>
-
-                  <p className="mt-1 text-sm text-slate-400">
-                    Sorted by distance
-                  </p>
-
-                </div>
-
-
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                  {
-                    visiblePlaces.length
-                  }{" "}
-                  shown
-                </span>
-
-              </div>
-
-            </div>
-
-
-            <div className="max-h-[500px] overflow-y-auto p-3">
-
-              {visiblePlaces.length ===
-              0 ? (
-
-                <div className="px-4 py-12 text-center">
-
-                  <div className="text-4xl">
-                    🔎
-                  </div>
-
-                  <p className="mt-3 font-semibold text-slate-700">
-                    Nothing mapped nearby
-                  </p>
-
-                  <p className="mx-auto mt-1 max-w-xs text-sm leading-6 text-slate-400">
-                    OpenStreetMap may not
-                    currently contain places
-                    in this category near the
-                    selected campus.
-                  </p>
-
-                </div>
-
-              ) : (
-
-                <div className="space-y-2">
-
-                  {visiblePlaces.map(
-                    (place) => {
-
-                      const category =
-                        CATEGORIES[
-                          place.category
-                        ];
-
-                      return (
-                        <button
-                          key={
-                            place.markerKey
-                          }
-                          type="button"
-                          onClick={() =>
-                            focusPlace(
-                              place
-                            )
-                          }
-                          className="w-full rounded-xl border border-transparent p-3 text-left transition hover:border-indigo-100 hover:bg-indigo-50/50"
-                        >
-
-                          <div className="flex items-start gap-3">
-
-                            <div
-                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg"
-                              style={{
-                                backgroundColor:
-                                  `${category.color}12`,
-                              }}
-                            >
-                              {
-                                category.emoji
-                              }
-                            </div>
-
-
-                            <div className="min-w-0 flex-1">
-
-                              <div className="flex items-start justify-between gap-3">
-
-                                <div className="min-w-0">
-
-                                  <p className="truncate font-semibold text-slate-800">
-                                    {
-                                      place.name
-                                    }
-                                  </p>
-
-                                  <p className="mt-0.5 text-xs text-slate-400">
-                                    {
-                                      category.label
-                                    }
-                                  </p>
-
-                                </div>
-
-
-                                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-                                  {
-                                    place.distanceKm
-                                  }{" "}
-                                  km
-                                </span>
-
-                              </div>
-
-
-                              {place.detail && (
-                                <p className="mt-2 line-clamp-2 text-sm text-slate-500">
-                                  {
-                                    place.detail
-                                  }
-                                </p>
-                              )}
-
-
-                              <p className="mt-2 text-xs font-semibold text-indigo-600">
-                                View on map →
-                              </p>
-
-                            </div>
-
-                          </div>
-
-                        </button>
-                      );
-                    }
-                  )}
-
-                </div>
-              )}
-
-            </div>
-
-          </aside>
-        )}
-
-      </section>
-
-
-      {/* DATA NOTE */}
-
-      {result && (
-        <section className="mt-5 rounded-xl bg-slate-100/70 px-4 py-3">
-
-          <p className="text-xs leading-5 text-slate-500">
-            Map data comes from
-            OpenStreetMap contributors.
-            Coverage varies between cities,
-            so unlisted facilities may still
-            exist. Distances shown are
-            straight-line distances from the
-            campus.
-          </p>
-
-        </section>
       )}
 
-    </main>
+      {/* Fixed height: resizing a live Leaflet map leaves unrendered white
+          areas unless invalidateSize() is called — simplest is not to resize. */}
+      <div ref={mapDivRef}
+        className="mt-5 h-[50vh] w-full rounded-xl border border-slate-200 shadow-sm" />
+
+      {/* Category lists */}
+      {result && (
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          {Object.entries(CATEGORIES).map(([key, cat]) => {
+            const items = result.places[key] ?? [];
+            return (
+              <div key={key} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 className="flex items-center gap-2 font-semibold text-slate-800">
+                  <span style={{ color: cat.color }}>●</span> {cat.emoji} {cat.label}
+                  <span className="ml-auto text-xs font-normal text-slate-400">
+                    {items.length} found
+                  </span>
+                </h2>
+                {items.length === 0 ? (
+                  <p className="mt-2 text-sm text-slate-400">
+                    Nothing mapped within range — a country ambassador may know unlisted options.
+                  </p>
+                ) : (
+                  <ul className="mt-3 space-y-2">
+                    {items.map((p, i) => (
+                      <li key={`${p.name}-${i}`} className="flex items-baseline justify-between gap-2 text-sm">
+                        <span className="text-slate-700">
+                          {p.name}
+                          {p.detail && <span className="text-slate-400"> · {p.detail}</span>}
+                        </span>
+                        <span className="shrink-0 font-medium text-slate-500">{p.distanceKm} km</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {result && (
+        <p className="mt-4 text-xs text-slate-400">
+          Data from OpenStreetMap contributors — coverage varies by city; unlisted
+          places may exist. Distances are straight-line.
+        </p>
+      )}
+    </div>
   );
 }
