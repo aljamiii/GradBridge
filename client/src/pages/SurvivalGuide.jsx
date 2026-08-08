@@ -28,6 +28,16 @@ const campusIcon = L.divIcon({
   iconAnchor: [13, 13],
 });
 
+// Same green teardrop as the Network Map — "a GradBridge person lives here".
+const studentPin = L.divIcon({
+  className: "",
+  html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+    background:#16a34a;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,
+  iconSize: [22, 22],
+  iconAnchor: [11, 22],
+  popupAnchor: [0, -20],
+});
+
 export default function SurvivalGuide() {
   const { user } = useAuth();
   const [q, setQ] = useState("");
@@ -37,7 +47,8 @@ export default function SurvivalGuide() {
 
   const mapDivRef = useRef(null);
   const mapRef = useRef(null);
-  const layerRef = useRef(null); // group holding current markers
+  const layerRef = useRef(null); // group holding amenity markers
+  const studentLayerRef = useRef(null); // group holding nearby-student pins
 
   // Create the map once.
   useEffect(() => {
@@ -48,6 +59,7 @@ export default function SurvivalGuide() {
       maxZoom: 18,
     }).addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
+    studentLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
   }, []);
 
@@ -113,18 +125,35 @@ export default function SurvivalGuide() {
   // Cross-link back: ask the network map's geospatial endpoint which
   // GradBridge students live near this campus (server-side $geoNear —
   // matched by distance, not name, and it excludes the current user).
-  const [nearby, setNearby] = useState(null);
+  const [nearby, setNearby] = useState([]);
   useEffect(() => {
     if (!result) return;
-    setNearby(null);
+    setNearby([]);
     api(
       `/api/users/network-map/nearby?lat=${result.center.lat}&lng=${result.center.lng}&radiusKm=10`
     )
-      .then((d) => {
-        if (d.count > 0) setNearby({ count: d.count, country: d.students[0].country });
-      })
+      .then((d) => setNearby(d.students ?? []))
       .catch(() => {}); // enrichment only — never block the guide itself
   }, [result]);
+
+  // Plot the nearby students on the map with the Network Map's green pin,
+  // so "your people" appear right next to the mosques and halal shops.
+  useEffect(() => {
+    const layer = studentLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    for (const s of nearby) {
+      if (s.lat == null || s.lng == null) continue;
+      L.marker([s.lat, s.lng], { icon: studentPin })
+        .addTo(layer)
+        .bindPopup(
+          `<strong>${s.name}</strong><br/>
+           ${s.degreeLevel ?? "Student"}${s.subject ? ` in ${s.subject}` : ""}<br/>
+           🎓 ${s.university ?? "—"}<br/>
+           ~${s.distanceKm} km from campus`
+        );
+    }
+  }, [nearby]);
 
   // One-click shortcut using the student's saved favorites.
   const [favorites, setFavorites] = useState([]);
@@ -165,15 +194,15 @@ export default function SurvivalGuide() {
         <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
-      {result && nearby && (
+      {result && nearby.length > 0 && (
         <div className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          🎓 {nearby.count} GradBridge student{nearby.count !== 1 && "s"} near this
-          campus —{" "}
+          🎓 {nearby.length} GradBridge student{nearby.length !== 1 && "s"} near this
+          campus — green pin{nearby.length !== 1 && "s"} on the map.{" "}
           <Link
-            to={`/network-map?country=${encodeURIComponent(nearby.country)}`}
+            to={`/network-map?country=${encodeURIComponent(nearby[0]?.country ?? "")}`}
             className="font-medium text-emerald-700 underline hover:text-emerald-900"
           >
-            see them on the Network Map →
+            See their profiles on the Network Map →
           </Link>
         </div>
       )}

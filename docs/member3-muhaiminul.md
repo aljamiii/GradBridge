@@ -29,6 +29,9 @@ degree, and subject.
    coordinates — privacy by default.
 4. Leaflet renders OSM tiles + a `divIcon` pin per student; filters run
    client-side over the fetched pins; `fitBounds` re-zooms to the filtered set.
+   A **sidebar of profile cards** mirrors the filtered pins (same `visible`
+   array, same order) — clicking a card `flyTo`s that student's pin and opens
+   its popup.
 5. **Cross-link:** each pin popup has "🧭 Explore this area →" deep-linking to
    `/survival-guide?q=<university, city, country>` (popup content is a DOM
    element, not an HTML string, so the link navigates inside the SPA). The map
@@ -36,7 +39,7 @@ degree, and subject.
    Guide's "see them on the Network Map" chip lands. Two map features, two
    halves of one journey: find your people, then learn their neighbourhood.
 6. **Geospatial endpoint (mine):** `GET /api/users/network-map/nearby?lat=&lng=`
-   powers that chip. `abroad.lat/lng` is mirrored into a GeoJSON `Point`
+   powers the Survival Guide's students-nearby sidebar and its green map pins. `abroad.lat/lng` is mirrored into a GeoJSON `Point`
    (`location`, **[lng, lat] order** — the classic gotcha) with a **2dsphere
    index**; a `$geoNear` aggregation (must be the *first* pipeline stage)
    returns opted-in students within the radius, already distance-sorted and

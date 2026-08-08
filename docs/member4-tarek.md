@@ -29,11 +29,13 @@ mosques, halal food, hospitals, and transit stops.
 5. Leaflet map: campus 🎓 marker + color-coded dots per category + popups.
 6. **Cross-link (thin by design):** after results load, one call to Member
    3's geospatial endpoint (`GET /api/users/network-map/nearby?lat=&lng=`) —
-   if any opted-in students live within 10 km of the campus, a chip links to
-   `/network-map?country=<theirs>`. The distance logic (`$geoNear` on a
-   2dsphere index) lives on the Network Map side; this page just renders the
-   count. Fail-soft: if that call fails, the guide still renders. Network Map
-   pin popups link back here with `?q=`, which auto-runs the search on load.
+   opted-in students within 10 km appear as **green Network-Map pins on the
+   map** plus a summary line linking to `/network-map?country=<theirs>` —
+   the full sidebar of student profile cards lives on the Network Map page. The distance logic (`$geoNear` on a
+   2dsphere index) lives on the Network Map side; this page just renders what
+   the endpoint returns. Fail-soft: if that call fails, the guide still
+   renders. Network Map pin popups link back here with `?q=`, which auto-runs
+   the search on load.
 
 **Two real bugs fixed here (own them — they're good stories):**
 - Overpass returned **406**: it blocks requests without a User-Agent. Fix:

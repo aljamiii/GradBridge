@@ -151,6 +151,8 @@ export const getNearbyStudents = async (req, res, next) => {
           university: a.university,
           degreeLevel: a.degreeLevel,
           subject: a.subject,
+          lat: a.lat, // so callers can plot these students on their own map
+          lng: a.lng,
           distanceKm: Math.round(s.distanceMeters / 100) / 10,
         };
       }),

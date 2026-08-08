@@ -110,6 +110,16 @@ export default function NetworkMap() {
 
   const countries = [...new Set(pins.map((p) => p.country))].sort();
 
+  // Sidebar card → fly the map to that student's pin and open its popup.
+  // markersRef is built from `visible` in the same order, so indices align.
+  const focusPin = (i) => {
+    const marker = markersRef.current[i];
+    const map = mapRef.current;
+    if (!marker || !map) return;
+    map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 6), { duration: 0.8 });
+    marker.openPopup();
+  };
+
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
       <h1 className="text-2xl font-bold text-slate-800">🗺️ Bangladeshi Abroad Network</h1>
@@ -141,13 +151,53 @@ export default function NetworkMap() {
         <input value={filters.subject} placeholder="Filter by subject…"
           onChange={(e) => setFilters({ ...filters, subject: e.target.value })}
           className={selectClass} />
-        <span className="ml-auto text-sm text-slate-500">
-          {visible.length} student{visible.length !== 1 && "s"} shown
-        </span>
       </div>
 
-      {/* The map */}
-      <div ref={mapDivRef} className="mt-4 h-[65vh] w-full rounded-xl border border-slate-200 shadow-sm" />
+      {/* Map + a sidebar of profile cards mirroring the current filters */}
+      <div className="mt-4 flex flex-col gap-4 lg:flex-row">
+        <div ref={mapDivRef}
+          className="h-[65vh] w-full rounded-xl border border-slate-200 shadow-sm lg:flex-1" />
+
+        <aside className="flex w-full shrink-0 flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:h-[65vh] lg:w-72">
+          <h2 className="flex items-center gap-2 font-semibold text-slate-800">
+            🎓 Students
+            <span className="ml-auto text-xs font-normal text-slate-400">
+              {visible.length} shown
+            </span>
+          </h2>
+
+          {visible.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-400">
+              No students match these filters yet — try widening them, or opt in
+              from your Profile page if you're already abroad.
+            </p>
+          ) : (
+            <ul className="mt-3 flex-1 space-y-2 overflow-y-auto">
+              {visible.map((p, i) => (
+                <li key={p.id}>
+                  <button type="button" onClick={() => focusPin(i)}
+                    className="w-full rounded-lg border border-slate-100 bg-slate-50 p-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 font-semibold text-white">
+                        {p.name?.[0] ?? "?"}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-slate-800">{p.name}</p>
+                        <p className="truncate text-xs text-slate-500">
+                          {p.degreeLevel ?? "Student"}
+                          {p.subject ? ` in ${p.subject}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-1.5 truncate text-xs text-slate-500">🎓 {p.university ?? "—"}</p>
+                    <p className="truncate text-xs text-slate-400">📍 {p.city}, {p.country}</p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
