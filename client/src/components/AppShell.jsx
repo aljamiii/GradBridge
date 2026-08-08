@@ -141,8 +141,8 @@ function SidebarContent({ user, unread, onNavigate, onLogout }) {
 
   return (
     <div className="flex h-full flex-col">
-      {/* brand */}
-      <Link to="/dashboard" onClick={onNavigate}
+      {/* brand — goes to the public home page, not the dashboard */}
+      <Link to="/" onClick={onNavigate}
         className="flex h-16 shrink-0 items-center gap-2.5 border-b border-slate-200/70 px-5">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-[var(--shadow-brand)]">
           <Icon name="bridge" className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -296,7 +296,7 @@ function Topbar({ user, unread, onOpenDrawer }) {
       </button>
 
       {/* brand shows on mobile where the sidebar is hidden */}
-      <Link to="/dashboard" className="flex items-center gap-2 lg:hidden">
+      <Link to="/" className="flex items-center gap-2 lg:hidden">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-white">
           <Icon name="bridge" className="h-4 w-4" strokeWidth={2} />
         </span>

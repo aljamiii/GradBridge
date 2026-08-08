@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Icon from "../components/Icon";
@@ -163,17 +163,27 @@ function ProductPreview() {
         </div>
       </div>
 
-      {/* floating accent card */}
-      <div className="absolute -bottom-5 -right-3 hidden rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-float)] sm:block">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-            <Icon name="check" className="h-4 w-4" strokeWidth={2.2} />
-          </span>
-          <div>
-            <p className="text-xs font-bold text-ink-900">Eligible</p>
-            <p className="text-[10px] text-ink-400">MSc CS · U of T</p>
+      {/* Sample outputs, sitting below the mockup so nothing is covered. */}
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+        {[
+          { icon: "check", tone: "emerald", title: "Eligible", sub: "MSc CS · U of T" },
+          { icon: "gift", tone: "amber", title: "4 scholarships", sub: "You qualify for" },
+          { icon: "users", tone: "sky", title: "2 mentors", sub: "Matched to you" },
+        ].map((c) => (
+          <div key={c.title}
+            className="flex items-center gap-2.5 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2.5 shadow-[var(--shadow-card)]">
+            <span className={cx("flex h-8 w-8 items-center justify-center rounded-lg",
+              c.tone === "emerald" ? "bg-emerald-50 text-emerald-600"
+                : c.tone === "amber" ? "bg-amber-50 text-amber-600"
+                  : "bg-sky-50 text-sky-600")}>
+              <Icon name={c.icon} className="h-4 w-4" strokeWidth={2.2} />
+            </span>
+            <div className="text-left">
+              <p className="text-xs font-bold text-ink-900">{c.title}</p>
+              <p className="text-[10px] text-ink-400">{c.sub}</p>
+            </div>
           </div>
-        </div>
+        ))}
       </div>
     </div>
   );
@@ -183,15 +193,6 @@ function ProductPreview() {
 
 export default function Home() {
   const { user } = useAuth();
-  const [health, setHealth] = useState(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/health").then((r) => r.json()).then(setHealth).catch(() => setFailed(true));
-  }, []);
-
-  const apiOk = !!health;
-  const dbOk = health?.database === "connected";
 
   return (
     <div className="flex-1">
@@ -347,7 +348,7 @@ export default function Home() {
       {/* ------------------------------------------------------------ footer */}
       <footer className="border-t border-white/5 bg-ink-900 text-slate-400">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <p className="flex items-center gap-2.5 text-base font-bold text-white">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-white">
@@ -371,25 +372,6 @@ export default function Home() {
               </ul>
             </div>
 
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-white">Project</p>
-              <ul className="mt-4 space-y-2.5 text-sm">
-                <li>CSE471 · System Analysis &amp; Design</li>
-                <li>Group 11 · BRAC University</li>
-                <li className="flex items-center gap-3 pt-1">
-                  <span className="flex items-center gap-1.5">
-                    <span className={cx("h-1.5 w-1.5 rounded-full",
-                      apiOk ? "bg-emerald-400" : failed ? "bg-red-400" : "bg-amber-400")} />
-                    API
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className={cx("h-1.5 w-1.5 rounded-full",
-                      dbOk ? "bg-emerald-400" : failed ? "bg-red-400" : "bg-amber-400")} />
-                    Database
-                  </span>
-                </li>
-              </ul>
-            </div>
           </div>
 
           <div className="mt-12 border-t border-white/10 pt-6 text-xs">
