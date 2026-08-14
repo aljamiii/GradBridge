@@ -73,6 +73,9 @@ export default function Chat() {
   const [draft, setDraft] = useState("");
   const [loadingThread, setLoadingThread] = useState(false);
   const [onlineIds, setOnlineIds] = useState(() => new Set());
+  const [query, setQuery] = useState("");
+  const [picking, setPicking] = useState(false); // "new chat" panel open
+  const [connections, setConnections] = useState([]);
   const bottomRef = useRef(null);
 
   const loadInbox = useCallback(() => {
@@ -150,8 +153,38 @@ export default function Chat() {
     });
   };
 
+  // Connections power the "new chat" picker.
+  useEffect(() => {
+    api("/api/connections").then((d) => setConnections(d.connections)).catch(() => {});
+  }, []);
+
   const active = conversations?.find((c) => c.id === activeId);
   const totalUnread = (conversations ?? []).reduce((n, c) => n + c.unread, 0);
+
+  // Search filters on the person's name AND the last message, so "visa"
+  // finds the thread where visas were discussed.
+  const q = query.trim().toLowerCase();
+  const filtered = (conversations ?? []).filter((c) =>
+    !q ||
+    (c.other?.name ?? "").toLowerCase().includes(q) ||
+    (c.lastMessageText ?? "").toLowerCase().includes(q)
+  );
+
+  // Connections you haven't opened a thread with yet.
+  const chattableIds = new Set((conversations ?? []).map((c) => String(c.other?.id)));
+  const newChatOptions = connections
+    .filter((p) => !chattableIds.has(String(p.id)))
+    .filter((p) => !q || p.name.toLowerCase().includes(q));
+
+  const startChat = async (person) => {
+    try {
+      const d = await api("/api/chat/start", { method: "POST", body: { userId: person.id } });
+      setPicking(false);
+      setQuery("");
+      loadInbox();
+      setParams({ c: d.conversationId });
+    } catch { /* the inbox stays as-is */ }
+  };
 
   // Group messages by calendar day for the date separators.
   const grouped = useMemo(() => {
@@ -180,16 +213,65 @@ export default function Chat() {
           )}
           style={{ height: "calc(100vh - 8.5rem)" }}
         >
-          <div className="flex items-center gap-2 border-b border-white/60 px-4 py-3.5">
-            <h1 className="font-bold text-ink-900">Messages</h1>
-            {totalUnread > 0 && <Badge tone="red">{totalUnread}</Badge>}
+          <div className="border-b border-white/60 px-3 pb-3 pt-3.5">
+            <div className="mb-2.5 flex items-center gap-2 px-1">
+              <h1 className="font-bold text-ink-900">Messages</h1>
+              {totalUnread > 0 && <Badge tone="red">{totalUnread}</Badge>}
+              <button onClick={() => setPicking((v) => !v)}
+                title="Start a new chat with a connection"
+                className={cx("ml-auto rounded-lg p-1.5 transition-colors",
+                  picking ? "bg-brand-500/15 text-brand-700" : "text-ink-400 hover:bg-white/70 hover:text-brand-600")}>
+                <Icon name={picking ? "close" : "plus"} className="h-4 w-4" strokeWidth={2.2} />
+              </button>
+            </div>
+            <div className="relative">
+              <Icon name="search"
+                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)}
+                placeholder={picking ? "Search connections…" : "Search messages…"}
+                className="w-full rounded-xl border border-white/70 bg-white/60 py-2 pl-8.5 pr-3 text-sm text-ink-900 placeholder-slate-400 transition-colors focus:border-brand-400 focus:bg-white/90 focus:outline-none focus:ring-4 focus:ring-brand-500/10"
+                style={{ paddingLeft: "2.1rem" }} />
+            </div>
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
-            {conversations === null ? (
+            {/* new-chat picker takes over the list while open */}
+            {picking ? (
+              newChatOptions.length === 0 ? (
+                <EmptyState
+                  icon={<Icon name="users" className="h-6 w-6" />}
+                  title={connections.length === 0 ? "No connections yet" : "All caught up"}
+                  description={connections.length === 0
+                    ? "Connect with people on the Network Map or Forum, then start a chat here."
+                    : "You already have a thread with everyone you're connected to."}
+                  className="!py-8"
+                />
+              ) : (
+                newChatOptions.map((p) => (
+                  <button key={p.id} onClick={() => startChat(p)}
+                    className="mb-1 flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-white/70">
+                    <Avatar name={p.name} size="md" online={onlineIds.has(String(p.id))} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-ink-900">{p.name}</p>
+                      <p className="truncate text-xs text-ink-400">
+                        {p.university || p.city || (p.role === "mentor" ? "Mentor" : "Student")}
+                      </p>
+                    </div>
+                    <Icon name="chevronRight" className="h-4 w-4 shrink-0 text-ink-400" />
+                  </button>
+                ))
+              )
+            ) : conversations === null ? (
               <div className="space-y-2 p-1">
                 {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
               </div>
+            ) : filtered.length === 0 && q ? (
+              <EmptyState
+                icon={<Icon name="search" className="h-6 w-6" />}
+                title="No matches"
+                description={`Nothing matches “${query}” in names or messages.`}
+                className="!py-8"
+              />
             ) : conversations.length === 0 ? (
               <EmptyState
                 icon={<Icon name="message" className="h-6 w-6" />}
@@ -200,7 +282,7 @@ export default function Chat() {
                 className="!py-10"
               />
             ) : (
-              conversations.map((c) => (
+              filtered.map((c) => (
                 <button key={c.id} onClick={() => setParams({ c: c.id })}
                   className={cx(
                     "mb-1 flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors",

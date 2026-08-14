@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
 import { getSocket, disconnectSocket } from "../lib/socket";
 import Icon from "./Icon";
+import { useConnections } from "./Connect";
 import { Avatar, cx } from "./ui";
 
 /* ------------------------------------------------------------- nav config */
@@ -67,6 +68,7 @@ const NAV = {
       items: [
         { to: "/bookings", icon: "calendar", label: "Session requests" },
         { to: "/chat", icon: "message", label: "Messages", badge: "unread" },
+        { to: "/connections", icon: "users", label: "My Network", badge: "requests" },
       ],
     },
     {
@@ -96,13 +98,15 @@ const NAV = {
 
 // Shown pinned at the bottom of the sidebar for students & mentors.
 const PERSONAL = [
+  { to: "/connections", icon: "users", label: "My Network", badge: "requests" },
   { to: "/bookings", icon: "calendar", label: "My Sessions" },
   { to: "/chat", icon: "message", label: "Chat", badge: "unread" },
 ];
 
 /* -------------------------------------------------------------- sidebar */
 
-function SidebarLink({ item, unread, onNavigate }) {
+function SidebarLink({ item, unread, requests, onNavigate }) {
+  const count = item.badge === "unread" ? unread : item.badge === "requests" ? requests : 0;
   return (
     <NavLink
       to={item.to}
@@ -128,9 +132,9 @@ function SidebarLink({ item, unread, onNavigate }) {
           />
           <Icon name={item.icon} className={cx("h-[18px] w-[18px] shrink-0", isActive && "text-brand-600")} />
           <span className="truncate">{item.label}</span>
-          {item.badge === "unread" && unread > 0 && (
+          {count > 0 && (
             <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-              {unread > 9 ? "9+" : unread}
+              {count > 9 ? "9+" : count}
             </span>
           )}
         </>
@@ -139,7 +143,7 @@ function SidebarLink({ item, unread, onNavigate }) {
   );
 }
 
-function SidebarContent({ user, unread, onNavigate, onLogout }) {
+function SidebarContent({ user, unread, requests, onNavigate, onLogout }) {
   const groups = NAV[user.role] ?? NAV.student;
   const showPersonal = user.role === "student";
 
@@ -165,7 +169,7 @@ function SidebarContent({ user, unread, onNavigate, onLogout }) {
             </p>
             <div className="space-y-0.5">
               {group.items.map((item) => (
-                <SidebarLink key={item.to + item.label} item={item} unread={unread} onNavigate={onNavigate} />
+                <SidebarLink key={item.to + item.label} item={item} unread={unread} requests={requests} onNavigate={onNavigate} />
               ))}
             </div>
           </div>
@@ -178,7 +182,7 @@ function SidebarContent({ user, unread, onNavigate, onLogout }) {
             </p>
             <div className="space-y-0.5">
               {PERSONAL.map((item) => (
-                <SidebarLink key={item.to} item={item} unread={unread} onNavigate={onNavigate} />
+                <SidebarLink key={item.to} item={item} unread={unread} requests={requests} onNavigate={onNavigate} />
               ))}
             </div>
           </div>
@@ -214,6 +218,7 @@ export default function AppShell({ children }) {
   const location = useLocation();
   const [unread, setUnread] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { pendingCount } = useConnections();
 
   const refreshUnread = useCallback(() => {
     api("/api/chat/unread-count").then((d) => setUnread(d.count)).catch(() => {});
@@ -248,7 +253,7 @@ export default function AppShell({ children }) {
     <div className="flex min-h-screen">
       {/* desktop sidebar */}
       <aside className="glass-panel fixed inset-y-0 left-0 z-30 hidden w-64 border-r lg:block">
-        <SidebarContent user={user} unread={unread} onLogout={handleLogout} />
+        <SidebarContent user={user} unread={unread} requests={pendingCount} onLogout={handleLogout} />
       </aside>
 
       {/* mobile drawer */}
@@ -257,7 +262,7 @@ export default function AppShell({ children }) {
           <div className="fixed inset-0 z-40 bg-ink-900/40 backdrop-blur-sm lg:hidden"
             onClick={() => setDrawerOpen(false)} aria-hidden="true" />
           <aside className="fixed inset-y-0 left-0 z-50 w-72 border-r border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl lg:hidden">
-            <SidebarContent user={user} unread={unread}
+            <SidebarContent user={user} unread={unread} requests={pendingCount}
               onNavigate={() => setDrawerOpen(false)} onLogout={handleLogout} />
           </aside>
         </>
@@ -265,7 +270,8 @@ export default function AppShell({ children }) {
 
       {/* content column */}
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
-        <Topbar user={user} unread={unread} onOpenDrawer={() => setDrawerOpen(true)} />
+        <Topbar user={user} unread={unread} requests={pendingCount}
+          onOpenDrawer={() => setDrawerOpen(true)} />
         <main className="flex flex-1 flex-col">{children}</main>
       </div>
     </div>
@@ -274,7 +280,7 @@ export default function AppShell({ children }) {
 
 /* ---------------------------------------------------------------- topbar */
 
-function Topbar({ user, unread, onOpenDrawer }) {
+function Topbar({ user, unread, requests, onOpenDrawer }) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {

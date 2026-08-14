@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
+import ConnectButton, { useConnectionStatuses } from "../components/Connect";
 
 const inputClass =
   "w-full rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
@@ -118,8 +119,9 @@ function MentorCard({ mentor }) {
         </button>
         <button onClick={openChat}
           className="rounded-lg bg-slate-100 px-4 py-1.5 text-sm font-medium text-ink-700 hover:bg-slate-200">
-          💬 Message
+          Message
         </button>
+        <ConnectButton userId={mentor.id} name={mentor.name} size="md" />
       </div>
 
       {showBooking && <BookingForm mentor={mentor} />}
@@ -136,6 +138,9 @@ export default function Mentors() {
       .then((data) => setMentors(data.mentors))
       .catch((err) => setError(err.message));
   }, []);
+
+  // One bulk status call for every mentor on screen.
+  useConnectionStatuses((mentors ?? []).map((m) => String(m.id)));
 
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">

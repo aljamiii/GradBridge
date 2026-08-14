@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { api } from "../lib/api";
 import { getSocket } from "../lib/socket";
 import { useAuth } from "../context/AuthContext";
+import ConnectButton, { useConnectionStatuses } from "../components/Connect";
 
 const selectClass =
   "rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none";
@@ -148,11 +149,14 @@ function StudentCard({ s, badge, online, onClick, onSayHi }) {
         </div>
       )}
       {onSayHi && (
-        <button type="button"
-          onClick={(e) => { e.stopPropagation(); onSayHi(); }}
-          className="mt-2 rounded-full bg-brand-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-brand-700">
-          👋 Say hi
-        </button>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <button type="button"
+            onClick={(e) => { e.stopPropagation(); onSayHi(); }}
+            className="rounded-full bg-brand-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-brand-700">
+            Say hi
+          </button>
+          <ConnectButton userId={s.id} name={s.name} />
+        </div>
       )}
     </div>
   );
@@ -423,6 +427,11 @@ export default function NetworkMap() {
   }, [visible, expandedCity, onlineIds, fitOn, fitByCity, navigate]);
 
   const countries = [...new Set(pins.map((p) => p.country))].sort();
+
+  // One bulk status call for everyone currently rendered in the sidebar.
+  useConnectionStatuses(
+    (probe?.students ?? visible).map((p) => String(p.id))
+  );
 
   // ✈️ Fly-to search: geocode a typed place, fly there, run the radius probe.
   const [placeQ, setPlaceQ] = useState("");

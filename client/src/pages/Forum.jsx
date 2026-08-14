@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import Icon from "../components/Icon";
+import ConnectButton, { useConnectionStatuses } from "../components/Connect";
 import {
   Alert, Avatar, Badge, Button, Card, EmptyState, Input, Page, PageHeader, Skeleton, Textarea, cx,
 } from "../components/ui";
@@ -83,7 +84,7 @@ function PostCard({ post, onChanged }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2.5">
             <Avatar name={post.authorName} size="sm" />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-xs text-ink-400">
                 <span className="font-semibold text-ink-700">{post.authorName}</span>
                 {" · "}{timeAgo(post.createdAt)}
@@ -94,6 +95,8 @@ function PostCard({ post, onChanged }) {
                 )}
               </p>
             </div>
+            {/* Connect with someone whose answer helped you. */}
+            <ConnectButton userId={post.author} name={post.authorName} />
           </div>
 
           <button onClick={() => setExpanded((v) => !v)}
@@ -246,6 +249,9 @@ export default function Forum() {
   }, [filters]);
 
   useEffect(() => { load(); }, [load]);
+
+  // One bulk status call for every post author on screen.
+  useConnectionStatuses([...new Set((posts ?? []).map((p) => String(p.author)).filter(Boolean))]);
 
   // Update one post in place after an interaction (no full reload).
   const patch = (updated) =>

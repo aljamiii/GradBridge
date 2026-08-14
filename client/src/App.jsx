@@ -31,6 +31,8 @@ import AdminScholarships from "./pages/AdminScholarships";
 import SuccessPath from "./pages/SuccessPath";
 import JobMarketPR from "./pages/JobMarketPR";
 import EmailComposer from "./pages/EmailComposer";
+import Connections from "./pages/Connections";
+import { ConnectionsProvider } from "./components/Connect";
 
 const STUDENT = ["student"];
 const MEMBERS = ["student", "mentor"];
@@ -48,11 +50,15 @@ function MarketingLayout() {
 // Every signed-in page: sidebar shell + soft app background.
 function AppLayout() {
   return (
-    <div className="bg-app min-h-screen">
-      <AppShell>
-        <Outlet />
-      </AppShell>
-    </div>
+    // ConnectionsProvider wraps the shell so the sidebar badge and every
+    // Connect button on the page share one status store.
+    <ConnectionsProvider>
+      <div className="bg-app min-h-screen">
+        <AppShell>
+          <Outlet />
+        </AppShell>
+      </div>
+    </ConnectionsProvider>
   );
 }
 
@@ -95,6 +101,7 @@ export default function App() {
         <Route path="/success-path" element={guarded(<SuccessPath />, MEMBERS)} />
         <Route path="/bookings" element={guarded(<Bookings />, MEMBERS)} />
         <Route path="/chat" element={guarded(<Chat />, MEMBERS)} />
+        <Route path="/connections" element={guarded(<Connections />, MEMBERS)} />
 
         <Route path="/admin/mentors" element={guarded(<AdminMentors />, ADMIN)} />
         <Route path="/admin/scholarships" element={guarded(<AdminScholarships />, ADMIN)} />

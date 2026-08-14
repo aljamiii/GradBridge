@@ -17,6 +17,8 @@ const shape = (post, userId) => ({
   tags: post.tags,
   city: post.city || null,
   authorName: post.author?.name ?? "Unknown",
+  // Exposed so the feed can offer "Connect" with a helpful author.
+  author: post.author?._id ?? post.author ?? null,
   createdAt: post.createdAt,
   upvoteCount: post.upvotes.length,
   upvotedByMe: post.upvotes.some((u) => String(u) === String(userId)),
