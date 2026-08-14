@@ -7,6 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { api } from "../lib/api";
 import { getSocket } from "../lib/socket";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "./Toast";
 import Icon from "./Icon";
 import { Button, cx } from "./ui";
 
@@ -87,6 +88,7 @@ const LABELS = {
 export default function ConnectButton({ userId, name, size = "sm", className, onChanged }) {
   const { user } = useAuth();
   const { statuses, setStatus } = useConnections();
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
 
   if (!userId || String(userId) === String(user?.id)) return null;
@@ -103,14 +105,22 @@ export default function ConnectButton({ userId, name, size = "sm", className, on
     try {
       if (state === "none") {
         const d = await api("/api/connections", { method: "POST", body: { userId } });
-        setStatus(userId, { state: d.status === "accepted" ? "connected" : "requested",
+        const accepted = d.status === "accepted";
+        setStatus(userId, { state: accepted ? "connected" : "requested",
           connectionId: d.connection?._id });
+        toast(
+          accepted ? `You're now connected with ${name ?? "them"}` : "Connection request sent",
+          { body: accepted ? "They had already asked to connect." : `${name ?? "They"} will see it in their notifications.` }
+        );
       } else if (state === "awaiting-me") {
         await api(`/api/connections/${connectionId}/accept`, { method: "PUT" });
         setStatus(userId, { state: "connected", connectionId });
+        toast(`You're now connected with ${name ?? "them"}`);
       }
       onChanged?.();
-    } catch { /* surfaced by the page's own error handling */ }
+    } catch (err) {
+      toast("Couldn't complete that", { body: err.message, tone: "error" });
+    }
     finally { setBusy(false); }
   };
 

@@ -3,6 +3,7 @@
 import Connection from "../models/Connection.js";
 import User from "../models/User.js";
 import { getIO } from "../socket.js";
+import { notify } from "../services/notify.js";
 
 // What we expose about another person. Never emails, never raw profiles.
 const publicPerson = (u) => ({
@@ -20,7 +21,7 @@ const PERSON_FIELDS =
   "name role mentorProfile.university studentProfile.abroad studentProfile.researchInterest";
 
 // Ping both sides so open tabs refresh their badges/lists.
-const notify = (...userIds) => {
+const notifySockets = (...userIds) => {
   const io = getIO();
   if (!io) return;
   for (const id of userIds) io.to(`user:${id}`).emit("connections:update");
@@ -54,7 +55,15 @@ export const sendRequest = async (req, res, next) => {
         existing.status = "accepted";
         existing.acceptedAt = new Date();
         await existing.save();
-        notify(me, them);
+        notifySockets(me, them);
+        await notify({
+          user: other._id,
+          type: "connection:accepted",
+          title: `${req.user.name} accepted your connection request`,
+          body: "You can message each other any time.",
+          link: "/connections",
+          actor: req.user,
+        });
         return res.json({ success: true, status: "accepted", connection: existing });
       }
       // I already asked → nothing to do.
@@ -66,7 +75,15 @@ export const sendRequest = async (req, res, next) => {
       recipient: other._id,
       pairKey,
     });
-    notify(me, them);
+    notifySockets(me, them);
+    await notify({
+      user: other._id,
+      type: "connection:request",
+      title: `${req.user.name} wants to connect`,
+      body: "Accept to add them to your network.",
+      link: "/connections",
+      actor: req.user,
+    });
     res.status(201).json({ success: true, status: "pending", connection });
   } catch (err) {
     next(err);
@@ -87,7 +104,16 @@ export const acceptRequest = async (req, res, next) => {
     connection.status = "accepted";
     connection.acceptedAt = new Date();
     await connection.save();
-    notify(connection.requester, connection.recipient);
+    notifySockets(connection.requester, connection.recipient);
+    // The whole point of this feature: tell the person who asked.
+    await notify({
+      user: connection.requester,
+      type: "connection:accepted",
+      title: `${req.user.name} accepted your connection request`,
+      body: "You can message each other any time.",
+      link: "/connections",
+      actor: req.user,
+    });
     res.json({ success: true, connection });
   } catch (err) {
     next(err);
@@ -106,7 +132,7 @@ export const removeConnection = async (req, res, next) => {
     if (!connection) {
       return res.status(404).json({ success: false, message: "Connection not found." });
     }
-    notify(connection.requester, connection.recipient);
+    notifySockets(connection.requester, connection.recipient);
     res.json({ success: true });
   } catch (err) {
     next(err);

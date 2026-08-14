@@ -33,6 +33,8 @@ import JobMarketPR from "./pages/JobMarketPR";
 import EmailComposer from "./pages/EmailComposer";
 import Connections from "./pages/Connections";
 import { ConnectionsProvider } from "./components/Connect";
+import { ToastProvider } from "./components/Toast";
+import { NotificationsProvider } from "./components/Notifications";
 
 const STUDENT = ["student"];
 const MEMBERS = ["student", "mentor"];
@@ -50,15 +52,20 @@ function MarketingLayout() {
 // Every signed-in page: sidebar shell + soft app background.
 function AppLayout() {
   return (
-    // ConnectionsProvider wraps the shell so the sidebar badge and every
-    // Connect button on the page share one status store.
-    <ConnectionsProvider>
-      <div className="bg-app min-h-screen">
-        <AppShell>
-          <Outlet />
-        </AppShell>
-      </div>
-    </ConnectionsProvider>
+    // Toast must wrap Notifications (live notifications raise toasts), and
+    // Connections wraps the shell so the sidebar badge and every Connect
+    // button on the page share one status store.
+    <ToastProvider>
+      <NotificationsProvider>
+        <ConnectionsProvider>
+          <div className="bg-app min-h-screen">
+            <AppShell>
+              <Outlet />
+            </AppShell>
+          </div>
+        </ConnectionsProvider>
+      </NotificationsProvider>
+    </ToastProvider>
   );
 }
 

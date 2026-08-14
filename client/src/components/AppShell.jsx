@@ -8,6 +8,7 @@ import { api } from "../lib/api";
 import { getSocket, disconnectSocket } from "../lib/socket";
 import Icon from "./Icon";
 import { useConnections } from "./Connect";
+import NotificationBell from "./Notifications";
 import { Avatar, cx } from "./ui";
 
 /* ------------------------------------------------------------- nav config */
@@ -317,12 +318,13 @@ function Topbar({ user, unread, requests, onOpenDrawer }) {
 
       <div className="ml-auto flex items-center gap-1.5">
         <Link to="/chat" aria-label="Messages"
-          className="relative rounded-lg p-2 text-ink-500 transition-colors hover:bg-slate-100 hover:text-ink-900">
-          <Icon name="bell" className="h-[18px] w-[18px]" />
+          className="relative rounded-lg p-2 text-ink-500 transition-colors hover:bg-white/70 hover:text-ink-900">
+          <Icon name="message" className="h-[18px] w-[18px]" />
           {unread > 0 && (
             <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
           )}
         </Link>
+        <NotificationBell />
         <Link to="/profile" className="rounded-full p-0.5 transition-shadow hover:shadow-[var(--shadow-card)]">
           <Avatar name={user.name} size="sm" />
         </Link>

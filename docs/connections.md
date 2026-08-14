@@ -86,6 +86,43 @@ and Remove. Presence dots come from the same socket feed as the map.
   messaged yet; choosing one opens the thread. Says "All caught up" when you
   already have a thread with everyone.
 
+## Notifications
+
+`server/src/models/Notification.js` · `server/src/services/notify.js` ·
+`server/src/controllers/notification.controller.js` ·
+`client/src/components/Notifications.jsx` · `client/src/components/Toast.jsx`
+
+**Persisted, not just pushed.** A socket-only notification is lost if the user
+was offline or reloads — so every event is written to MongoDB and *also*
+emitted to `user:<id>`. The bell reads from the DB on mount and appends live
+arrivals.
+
+One `notify({ user, type, title, body, link, actor })` helper serves every
+feature, so a controller causing an event doesn't need to know about sockets or
+persistence. It **no-ops when the actor is the recipient**, which is why
+replying to your own forum post doesn't notify you.
+
+Events wired up:
+
+| Type | Fires when |
+|---|---|
+| `connection:request` | Someone presses Connect on you |
+| `connection:accepted` | Your request is accepted |
+| `booking:requested` | A student books a session with you |
+| `booking:confirmed` / `declined` / `cancelled` | A booking changes state |
+| `forum:reply` | Someone comments on your post |
+
+**Three layers of feedback**, deliberately:
+1. **Toast** — a live arrival raises a clickable toast, so you notice without
+   watching the bell. Auto-dismisses; capped at 3 on screen.
+2. **Bell** — persistent list with unread dots, per-item and mark-all read,
+   deep links to the relevant page.
+3. **Sidebar badge** — the standing count of pending requests.
+
+`GET /api/notifications` · `PUT /api/notifications/read { id? }` (omit `id` to
+mark all) · `DELETE /api/notifications` clears **read ones only**, so an unread
+notification arriving mid-click isn't destroyed.
+
 ## Viva Q&A
 
 - *Why not just let people message anyone?* They can — that's peer chat. The

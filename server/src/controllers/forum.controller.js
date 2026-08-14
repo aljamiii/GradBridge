@@ -1,5 +1,6 @@
 // CONTROLLER: community forum (Module 3) — posts, upvotes, ratings, comments.
 import Post from "../models/Post.js";
+import { notify } from "../services/notify.js";
 
 // Normalize "Visa, IELTS " → ["visa", "ielts"] (lowercase, deduped, max 5).
 const cleanTags = (tags) =>
@@ -132,6 +133,16 @@ export const addComment = async (req, res, next) => {
 
     post.comments.push({ author: req.user._id, authorName: req.user.name, text });
     await post.save();
+
+    // Tell the post's author someone answered (notify() no-ops on self-reply).
+    await notify({
+      user: post.author?._id ?? post.author,
+      type: "forum:reply",
+      title: `${req.user.name} replied to your post`,
+      body: `“${post.title}” — ${text.slice(0, 80)}${text.length > 80 ? "…" : ""}`,
+      link: "/forum",
+      actor: req.user,
+    });
 
     res.json({ success: true, post: shape(post, req.user._id) });
   } catch (err) {
