@@ -62,12 +62,37 @@ Four layered shadows, applied as `shadow-[var(--shadow-card)]`:
 
 | Class | Effect |
 |---|---|
-| `.bg-app` | The app background — soft indigo/sky radial wash, not flat grey |
-| `.glass` | Frosted translucent surface (sticky headers) |
+| `.bg-app` | App background — a fixed 4-orb colour mesh (indigo/sky/violet/teal) |
 | `.text-gradient` | Brand gradient headline text |
-| `.lift` | Hover: rise 2px + deepen shadow |
+| `.lift` | Hover: rise 2px + deepen shadow (solid surfaces) |
 | `.animate-rise` | Entrance: fade + 10px rise |
 | `.skeleton` | Shimmering loading placeholder |
+
+### Glassmorphism
+
+The UI is glass over a colour mesh. **Frosted surfaces only read as glass if
+there is colour behind them** — that's why `.bg-app` is a fixed multi-orb
+gradient rather than flat grey. Every glass class then blurs what's underneath.
+
+| Class | Where |
+|---|---|
+| `.glass` | Sticky headers and overlays (72% white, blur 14) |
+| `.glass-card` | The standard content surface — what `<Card>` uses (62% white, blur 16) |
+| `.glass-panel` | Denser, for sidebars and rails (55% white, blur 20) |
+| `.glass-inset` | Rows and wells **inside** a glass card — no second blur layer |
+| `.glass-dark` | Glass on dark sections (marketing, footer) |
+| `.glass-hover` | Interactive glass: the pane *brightens* rather than changing colour |
+
+Three rules that keep it from looking cheap:
+
+1. **The inset top highlight is what sells it.** `inset 0 1px 0 rgb(255 255 255 / .75)`
+   reads as light catching the leading edge of a pane. Without it, glass looks
+   like a washed-out card.
+2. **Never stack glass on glass.** A blurred surface inside another blurred
+   surface turns to mud — use `.glass-inset` for interior rows.
+3. **Some things must stay opaque.** Anything that represents a *screen* or
+   carries dense data (the landing-page product mockup, map tiles) uses
+   `<Card solid>` or plain white. `<Card>` takes a `solid` prop for this.
 
 All motion is disabled automatically under `prefers-reduced-motion`.
 

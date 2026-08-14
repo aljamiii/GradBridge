@@ -6,6 +6,8 @@ import {
   getJobMarket,
   getJobMarketCountries,
   computePRPoints,
+  listEmailTemplates,
+  composeEmail,
 } from "../controllers/tools.controller.js";
 import { protect, authorize } from "../middleware/auth.js";
 
@@ -18,5 +20,7 @@ router.post("/financial-risk", analyzeFinancialRisk);  // POST /api/tools/financ
 router.get("/job-market/countries", getJobMarketCountries);
 router.get("/job-market", getJobMarket);               // GET  /api/tools/job-market
 router.post("/pr-points", computePRPoints);            // POST /api/tools/pr-points
+router.get("/email-templates", listEmailTemplates);    // GET  /api/tools/email-templates
+router.post("/compose-email", composeEmail);           // POST /api/tools/compose-email
 
 export default router;
