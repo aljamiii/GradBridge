@@ -343,6 +343,31 @@ const TOP_K = 4;             // how many chunks to hand to Gemini
 const MIN_SIMILARITY = 0.45; // raw cosine — below this, a chunk is probably irrelevant
 const VECTOR_INDEX = "knowledge_vector_index"; // created by scripts/createVectorIndex.js
 
+// Detect whether the student's question explicitly mentions
+// one of the destinations covered by our knowledge base.
+const findMentionedDestination = async (text) => {
+  const chunks = await loadChunks();
+
+  const destinations = [
+    ...new Map(
+      chunks.map((c) => [
+        `${c.city}|${c.country}`,
+        { city: c.city, country: c.country },
+      ])
+    ).values(),
+  ];
+
+  const lower = text.toLowerCase();
+
+  return (
+    destinations.find(
+      (d) =>
+        lower.includes(d.city.toLowerCase()) ||
+        lower.includes(d.country.toLowerCase())
+    ) || null
+  );
+};
+
 // Retrieval has two paths:
 //   PRIMARY  — Atlas Vector Search: the DB's own vector index finds the nearest
 //              chunks, like any other indexed query. Scales past a for-loop.
@@ -396,15 +421,86 @@ const retrieveChunks = async (qVector) => {
 export const askDestinationAdvisor = async (req, res, next) => {
   try {
     const question = (req.body.question || "").trim();
+
+    const history = Array.isArray(req.body.history)  // add history handling (follow up questions), like- is toronto safe? how safe is it? (here, "it" will mean "toronto")
+      ? req.body.history.slice(-3)  
+      : [];
+
     if (question.length < 5) {
       return res.status(400).json({ success: false, message: "Please ask a full question." });
     }
 
     // 1. EMBED the question
-    const qVector = await embedText(question);
+    const historyText = history
+      .map(
+        (item) =>
+          `Previous question: ${item.question || ""}\nPrevious answer: ${item.answer || ""}`
+      )
+      .join("\n\n");
+
+    const retrievalQuery = historyText
+      ? `${historyText}\n\nCurrent question: ${question}`
+      : question;
+    
+    // First give priority to a destination explicitly mentioned
+    // in the CURRENT question.
+    let mentionedDestination =
+      await findMentionedDestination(question);
+
+    // If no destination is mentioned, look through conversation
+    // history from newest → oldest.  
+    if (!mentionedDestination && history.length > 0) {
+      // Search history from newest → oldest so follow-up questions
+      // refer to the most recently discussed destination.
+      for (let i = history.length - 1; i >= 0; i--) {
+        const recentContext =
+          `${history[i].question || ""} ${history[i].answer || ""}`;
+
+        mentionedDestination =
+          await findMentionedDestination(recentContext);
+
+        if (mentionedDestination) {
+          break;
+        }
+      }
+    }
+
+    const qVector = await embedText(retrievalQuery);
 
     // 2. RETRIEVE top-K most similar chunks (vector index, or in-memory fallback)
-    const { scored, retrieval } = await retrieveChunks(qVector);
+    const retrievalResult = await retrieveChunks(qVector);
+
+    let scored = retrievalResult.scored;
+    const retrieval = retrievalResult.retrieval;
+
+    // KEEP RESULTS IN THE CORRECT CITY
+    if (mentionedDestination) {
+      scored = scored.filter(
+        (c) =>
+          c.city.toLowerCase() ===
+          mentionedDestination.city.toLowerCase()
+      );
+
+      // If Atlas top results missed the intended city,
+      // do a focused cosine search over that city's chunks.
+      if (scored.length === 0) {
+        const chunks = await loadChunks();
+
+        scored = chunks
+          .filter(
+            (c) =>
+              c.city.toLowerCase() ===
+              mentionedDestination.city.toLowerCase()
+          )
+          .map((c) => ({
+            ...c,
+            score: cosine(qVector, c.embedding),
+          }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, TOP_K)
+          .filter((c) => c.score >= MIN_SIMILARITY);
+      }
+    }
 
     if (scored.length === 0 && (await KnowledgeChunk.estimatedDocumentCount()) === 0) {
       return res.status(503).json({
@@ -414,7 +510,14 @@ export const askDestinationAdvisor = async (req, res, next) => {
     }
 
     // 3. AUGMENT: live weather for the city the best chunks are about
-    const topCity = scored[0] ? { city: scored[0].city, country: scored[0].country } : null;
+    const topCity = mentionedDestination
+      ? mentionedDestination
+      : scored[0]
+        ? {
+            city: scored[0].city,
+            country: scored[0].country,
+          }
+        : null;
     const weather = topCity ? await getWeather(topCity.city) : null;
 
     const context = scored
@@ -425,18 +528,36 @@ export const askDestinationAdvisor = async (req, res, next) => {
       ? `\n\nLIVE WEATHER RIGHT NOW in ${weather.city}: ${weather.tempC}°C (feels like ${weather.feelsLikeC}°C), ${weather.description}, humidity ${weather.humidity}%.`
       : "";
 
+    const conversationContext = history.length
+      ? history
+          .map(
+            (item) =>
+              `Student: ${item.question || ""}\nAdvisor: ${item.answer || ""}`
+          )
+          .join("\n\n")
+      : "(no previous conversation)";
+
     const prompt = `You are GradBridge's destination advisor for Bangladeshi students planning to study abroad.
 
-Answer the student's question using ONLY the context below. Rules:
-- If the context doesn't contain the answer, say honestly that your guide doesn't cover it yet and suggest asking a country ambassador — DO NOT invent facts.
+Answer the student's current question using ONLY the retrieved context below.
+
+Rules:
+- The conversation history may help you understand references such as "it", "there", "that place", "what about rent?", or other follow-up wording.
+- Conversation history is ONLY for understanding what the student means.
+- Factual claims must still come from the retrieved context or live weather.
+- If the retrieved context doesn't contain the answer, say honestly that your guide doesn't cover it yet and suggest asking a country ambassador — DO NOT invent facts.
 - Be specific and practical; write 1 short paragraph or a few bullet points, not an essay.
 - If live weather is provided and relevant, weave it in naturally.
 - Answer in the same language the student asked in (English or Bangla).
 
-CONTEXT:
+RECENT CONVERSATION:
+${conversationContext}
+
+RETRIEVED CONTEXT:
 ${context || "(no relevant guide sections found)"}${weatherLine}
 
-STUDENT'S QUESTION: ${question}`;
+CURRENT STUDENT QUESTION:
+${question}`;
 
     // 4. GENERATE
     const answer = await generateText(prompt);
