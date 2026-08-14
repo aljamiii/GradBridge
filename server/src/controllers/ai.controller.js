@@ -366,9 +366,8 @@ export const askDestinationAdvisor = async (req, res, next) => {
     let mentionedDestination =
       await findMentionedDestination(question);
 
-    // If the current question does not mention a city/country,
-    // use recent conversation history for follow-up questions
-    // such as "how safe is it?" or "what about rent?"
+    // If no destination is mentioned, look through conversation
+    // history from newest → oldest.  
     if (!mentionedDestination && history.length > 0) {
       // Search history from newest → oldest so follow-up questions
       // refer to the most recently discussed destination.
