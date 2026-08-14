@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
 const inputClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
+  "w-full rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 const usd = (n) => `$${Number(n).toLocaleString()}`;
 const bdt = (n) => `৳${Number(n).toLocaleString()}`;
@@ -58,7 +58,7 @@ export default function FinancialRisk() {
       </p>
 
       <form onSubmit={analyze}
-        className="mt-6 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
+        className="mt-6 glass-card rounded-2xl p-6 shadow-[var(--shadow-card)]">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-600">
@@ -109,7 +109,7 @@ export default function FinancialRisk() {
 
           {/* The numbers */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <p className="text-sm text-ink-500">Funding gap</p>
               <p className="mt-1 text-2xl font-bold text-ink-900">{usd(data.shortfallUSD)}</p>
               {data.shortfallBDT != null && (
@@ -117,12 +117,12 @@ export default function FinancialRisk() {
               )}
               <p className="mt-1 text-xs text-ink-400">{data.shortfallPercent}% of total cost</p>
             </div>
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <p className="text-sm text-ink-500">Scholarship coverage</p>
               <p className="mt-1 text-2xl font-bold text-ink-900">{data.scholarshipCoveragePercent}%</p>
               <p className="mt-1 text-xs text-ink-400">of the total cost</p>
             </div>
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <p className="text-sm text-ink-500">Save monthly</p>
               {data.monthlySavingsUSD != null ? (
                 <>
