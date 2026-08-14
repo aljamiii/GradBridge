@@ -76,9 +76,20 @@ export default function DestinationAdvisor() {
     setConversation((c) => [...c, { question: text, loading: true }]);
 
     try {
+      const history = conversation
+        .filter((item) => !item.loading && !item.error && item.answer)
+        .slice(-3)
+        .map((item) => ({
+          question: item.question,
+          answer: item.answer,
+        }));
+
       const data = await api("/api/ai/destination-advisor", {
         method: "POST",
-        body: { question: text },
+        body: {
+          question: text,
+          history,
+        },
       });
       setConversation((c) =>
         c.map((item, i) =>
