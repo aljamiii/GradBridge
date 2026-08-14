@@ -7,6 +7,10 @@ const inputClass =
 
 const usd = (n) => `$${Number(n).toLocaleString()}`;
 const bdt = (n) => `৳${Number(n).toLocaleString()}`;
+const localMoney = (n, currency) =>
+  `${Number(n).toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  })} ${currency}`;
 
 const LIFESTYLES = [
   { value: "frugal", label: "🪙 Frugal", hint: "shared room, cook at home" },
@@ -27,6 +31,11 @@ export default function CostPredictor() {
   const [error, setError] = useState("");
 
   const budget = user.studentProfile?.budgetUSD;
+
+  const totalLocal =
+  result?.exchange?.usdToLocal && result?.totalUSD
+    ? result.totalUSD * result.exchange.usdToLocal
+    : null;
 
   const predict = async (e) => {
     e.preventDefault();
@@ -128,9 +137,26 @@ export default function CostPredictor() {
               <tr>
                 <td className="py-3 font-semibold text-ink-900">Total (first year)</td>
                 <td className="py-3 text-right">
-                  <span className="block text-lg font-bold text-brand-600">{usd(result.totalUSD)}</span>
+                  {/* USD */}
+                  <span className="block text-lg font-bold text-brand-600">
+                    {usd(result.totalUSD)} USD
+                  </span>
+
+                  {/* BDT */}
                   {result.totalBDT && (
-                    <span className="block text-sm text-ink-500">≈ {bdt(result.totalBDT)}</span>
+                    <span className="block text-sm text-ink-500">
+                      ≈ {bdt(result.totalBDT)} BDT
+                    </span>
+                  )}
+
+                  {/* Destination local currency */}
+                  {totalLocal && result.exchange.currencyLocal && (
+                    <span className="block text-sm font-medium text-slate-600">
+                      ≈ {localMoney(
+                        totalLocal,
+                        result.exchange.currencyLocal
+                      )}
+                    </span>
                   )}
                 </td>
               </tr>
@@ -145,8 +171,16 @@ export default function CostPredictor() {
                 : "bg-amber-50 text-amber-700"
             }`}>
               {budget >= result.totalUSD
-                ? `✅ Your budget (${usd(budget)}/yr) covers this estimate.`
-                : `⚠️ Your budget (${usd(budget)}/yr) is ${usd(result.totalUSD - budget)} short of this estimate — consider scholarships or a more frugal setup.`}
+                ? `✅ Your budget (${usd(
+                    budget
+                  )}/yr) covers this estimate. You would have approximately ${usd(
+                    budget - result.totalUSD
+                  )} remaining.`
+                : `⚠️ Your budget (${usd(
+                    budget
+                  )}/yr) is ${usd(
+                    result.totalUSD - budget
+                  )} short of this estimate — consider scholarships or a more frugal setup.`}
             </div>
           )}
 
