@@ -171,7 +171,7 @@ export default function VisaChecklist() {
             </h3>
             <p className="mt-2 text-sm italic text-slate-600">&ldquo;{data.reminderDraft}&rdquo;</p>
             <p className="mt-2 text-xs text-ink-400">
-              Automatic email reminders arrive when deadline alerts launch.
+              Gemini-generated reminder draft — copy and use this reminder for your application deadline.
             </p>
           </div>
         </div>
