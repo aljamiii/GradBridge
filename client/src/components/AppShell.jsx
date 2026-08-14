@@ -39,6 +39,10 @@ const NAV = {
       ],
     },
     {
+      label: "Outreach",
+      items: [{ to: "/email-composer", icon: "message", label: "Email Composer" }],
+    },
+    {
       label: "Guidance",
       items: [
         { to: "/destination-advisor", icon: "globe", label: "Destination Advisor" },
@@ -143,7 +147,7 @@ function SidebarContent({ user, unread, onNavigate, onLogout }) {
     <div className="flex h-full flex-col">
       {/* brand — goes to the public home page, not the dashboard */}
       <Link to="/" onClick={onNavigate}
-        className="flex h-16 shrink-0 items-center gap-2.5 border-b border-slate-200/70 px-5">
+        className="flex h-16 shrink-0 items-center gap-2.5 border-b border-white/50 px-5">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-[var(--shadow-brand)]">
           <Icon name="bridge" className="h-[18px] w-[18px]" strokeWidth={2} />
         </span>
@@ -182,7 +186,7 @@ function SidebarContent({ user, unread, onNavigate, onLogout }) {
       </nav>
 
       {/* account */}
-      <div className="shrink-0 border-t border-slate-200/70 p-3">
+      <div className="shrink-0 border-t border-white/50 p-3">
         <Link to="/profile" onClick={onNavigate}
           className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-slate-100">
           <Avatar name={user.name} size="sm" />
@@ -243,7 +247,7 @@ export default function AppShell({ children }) {
   return (
     <div className="flex min-h-screen">
       {/* desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200/70 bg-white/80 backdrop-blur-sm lg:block">
+      <aside className="glass-panel fixed inset-y-0 left-0 z-30 hidden w-64 border-r lg:block">
         <SidebarContent user={user} unread={unread} onLogout={handleLogout} />
       </aside>
 
@@ -252,7 +256,7 @@ export default function AppShell({ children }) {
         <>
           <div className="fixed inset-0 z-40 bg-ink-900/40 backdrop-blur-sm lg:hidden"
             onClick={() => setDrawerOpen(false)} aria-hidden="true" />
-          <aside className="fixed inset-y-0 left-0 z-50 w-72 border-r border-slate-200 bg-white shadow-2xl lg:hidden">
+          <aside className="fixed inset-y-0 left-0 z-50 w-72 border-r border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl lg:hidden">
             <SidebarContent user={user} unread={unread}
               onNavigate={() => setDrawerOpen(false)} onLogout={handleLogout} />
           </aside>

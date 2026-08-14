@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 
 const inputClass =
-  "rounded-lg border border-slate-300 px-3 py-2 text-sm text-ink-900 placeholder-slate-400 focus:border-brand-500 focus:outline-none";
+  "rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-sm text-ink-900 placeholder-slate-400 focus:border-brand-500 focus:outline-none";
 
 const LEVEL_STYLES = {
   strong: "bg-green-50 border-green-200 text-green-800",
@@ -41,7 +41,7 @@ function JobMarket() {
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
+    <section className="glass-card rounded-2xl p-6 shadow-[var(--shadow-card)]">
       <h2 className="font-semibold text-ink-900">💼 Live Job Market</h2>
       <p className="mt-0.5 text-sm text-ink-500">
         How many jobs exist in your field right now — live from Adzuna.
@@ -69,12 +69,12 @@ function JobMarket() {
       {data && (
         <div className="mt-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg bg-slate-50 p-4">
+            <div className="rounded-lg bg-white/45 p-4">
               <p className="text-sm text-ink-500">Open positions</p>
               <p className="text-2xl font-bold text-ink-900">{data.count.toLocaleString()}</p>
               <p className="text-xs text-ink-400">"{data.field}" in {data.country}</p>
             </div>
-            <div className="rounded-lg bg-slate-50 p-4">
+            <div className="rounded-lg bg-white/45 p-4">
               <p className="text-sm text-ink-500">Avg advertised salary</p>
               <p className="text-2xl font-bold text-ink-900">
                 {data.avgSalary ? data.avgSalary.toLocaleString() : "—"}
@@ -122,7 +122,7 @@ function PRCalculator() {
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
+    <section className="glass-card rounded-2xl p-6 shadow-[var(--shadow-card)]">
       <h2 className="font-semibold text-ink-900">🏅 PR Points Estimator</h2>
       <p className="mt-0.5 text-sm text-ink-500">
         Rule-based scoring modeled on the real Canada CRS and Australia 189 systems.

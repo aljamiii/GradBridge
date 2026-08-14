@@ -8,7 +8,7 @@ const ACCENT = "#4f46e5";
 // Headline stat tile — a number's job is to be read, not charted.
 function StatTile({ label, value, emoji }) {
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
       <p className="text-sm text-ink-500">{emoji} {label}</p>
       <p className="mt-1 text-3xl font-bold text-ink-900">{value}</p>
     </div>
@@ -19,7 +19,7 @@ function StatTile({ label, value, emoji }) {
 function BarList({ title, items, valueKey, labelKey, format = (v) => v, prefix = "" }) {
   const max = Math.max(...items.map((i) => i[valueKey]), 1);
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">{title}</h2>
       {items.length === 0 ? (
         <p className="mt-3 text-sm text-ink-400">Not enough data yet.</p>
@@ -52,7 +52,7 @@ function BarList({ title, items, valueKey, labelKey, format = (v) => v, prefix =
 function MonthColumns({ items }) {
   const max = Math.max(...items.map((i) => i.posts), 1);
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
         Seasonal trend — posts per month
       </h2>

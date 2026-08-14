@@ -182,7 +182,7 @@ export default function Chat() {
             <form onSubmit={send} className="flex gap-2 border-t border-slate-200 bg-white p-3">
               <input value={draft} onChange={(e) => setDraft(e.target.value)}
                 placeholder="Type a message…"
-                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-ink-900 focus:border-brand-500 focus:outline-none" />
+                className="flex-1 rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 focus:border-brand-500 focus:outline-none" />
               <button type="submit" disabled={!draft.trim()}
                 className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white shadow-[var(--shadow-brand)] transition-all hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50">
                 Send

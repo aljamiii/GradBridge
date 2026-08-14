@@ -9,13 +9,18 @@ const cx = (...parts) => parts.filter(Boolean).join(" ");
 
 // The standard content surface. `hover` adds the lift micro-interaction —
 // only use it when the whole card is clickable.
-export function Card({ as: Tag = "div", hover = false, padded = true, className, children, ...rest }) {
+export function Card({ as: Tag = "div", hover = false, padded = true, solid = false, className, children, ...rest }) {
   return (
     <Tag
       className={cx(
-        "rounded-2xl border border-slate-200/80 bg-white shadow-[var(--shadow-card)]",
+        "rounded-2xl",
+        // Glass by default; `solid` opts out for surfaces that sit on top of
+        // busy content (maps, charts) where a second blur layer muddies it.
+        solid
+          ? "border border-slate-200/80 bg-white shadow-[var(--shadow-card)]"
+          : "glass-card",
         padded && "p-5 sm:p-6",
-        hover && "lift hover:border-brand-200",
+        hover && (solid ? "lift hover:border-brand-200" : "glass-hover"),
         className
       )}
       {...rest}
@@ -144,9 +149,10 @@ export function Badge({ tone = "slate", className, children, ...rest }) {
 /* ------------------------------------------------------------------- Forms */
 
 export const inputClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-ink-900 " +
-  "placeholder-slate-400 transition-colors " +
-  "hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
+  "w-full rounded-xl border border-white/70 bg-white/60 px-3.5 py-2.5 text-sm text-ink-900 " +
+  "backdrop-blur-sm placeholder-slate-400 transition-colors " +
+  "hover:border-white/90 hover:bg-white/75 focus:border-brand-400 focus:bg-white/90 " +
+  "focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 export function Field({ label, hint, error, children, className }) {
   return (
@@ -204,10 +210,10 @@ export function Alert({ tone = "info", className, children }) {
 }
 
 // Honest empty state: says what's missing and what to do about it.
-export function EmptyState({ icon = "✨", title, description, action, className }) {
+export function EmptyState({ icon, title, description, action, className }) {
   return (
     <div className={cx("flex flex-col items-center px-6 py-12 text-center", className)}>
-      <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-2xl">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/60 text-ink-400 ring-1 ring-white/70 backdrop-blur-sm">
         {icon}
       </div>
       <p className="font-semibold text-ink-900">{title}</p>
@@ -229,10 +235,10 @@ export function Skeleton({ className }) {
 // A single number with a label — used on the dashboard and insight pages.
 export function Stat({ label, value, hint, icon, tone = "brand" }) {
   const tones = {
-    brand: "bg-brand-50 text-brand-600",
-    green: "bg-emerald-50 text-emerald-600",
-    amber: "bg-amber-50 text-amber-600",
-    sky: "bg-sky-50 text-sky-600",
+    brand: "bg-brand-500/12 text-brand-600 ring-1 ring-brand-500/15",
+    green: "bg-emerald-500/12 text-emerald-600 ring-1 ring-emerald-500/15",
+    amber: "bg-amber-500/12 text-amber-600 ring-1 ring-amber-500/15",
+    sky: "bg-sky-500/12 text-sky-600 ring-1 ring-sky-500/15",
   };
   return (
     <Card className="flex items-start gap-4" padded={false}>

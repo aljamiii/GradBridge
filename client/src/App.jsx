@@ -30,6 +30,7 @@ import Scholarships from "./pages/Scholarships";
 import AdminScholarships from "./pages/AdminScholarships";
 import SuccessPath from "./pages/SuccessPath";
 import JobMarketPR from "./pages/JobMarketPR";
+import EmailComposer from "./pages/EmailComposer";
 
 const STUDENT = ["student"];
 const MEMBERS = ["student", "mentor"];
@@ -86,6 +87,7 @@ export default function App() {
         <Route path="/financial-risk" element={guarded(<FinancialRisk />, STUDENT)} />
         <Route path="/visa-checklist" element={guarded(<VisaChecklist />, STUDENT)} />
         <Route path="/job-pr" element={guarded(<JobMarketPR />, STUDENT)} />
+        <Route path="/email-composer" element={guarded(<EmailComposer />, STUDENT)} />
 
         <Route path="/forum" element={guarded(<Forum />, MEMBERS)} />
         <Route path="/forum/insights" element={guarded(<ForumInsights />, MEMBERS)} />

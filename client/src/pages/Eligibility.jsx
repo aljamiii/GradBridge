@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
 const inputClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
+  "w-full rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 // Verdict banner styling per outcome.
 const VERDICTS = {
@@ -79,7 +79,7 @@ export default function Eligibility() {
       </p>
 
       {/* Profile snapshot the analysis will use */}
-      <div className="mt-6 rounded-2xl border border-slate-200/80 bg-white p-4 text-sm shadow-[var(--shadow-card)]">
+      <div className="mt-6 glass-card rounded-2xl p-4 text-sm shadow-[var(--shadow-card)]">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-slate-600">
             <span className="font-semibold text-ink-400 uppercase tracking-wide text-xs">
@@ -106,7 +106,7 @@ export default function Eligibility() {
 
       {/* Target program form */}
       <form onSubmit={analyze}
-        className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
+        className="mt-4 glass-card rounded-2xl p-6 shadow-[var(--shadow-card)]">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-600">University *</span>
@@ -170,7 +170,7 @@ export default function Eligibility() {
 
           {/* Gaps */}
           {result.gaps?.length > 0 && (
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 What&apos;s missing ({result.gaps.length})
               </h3>
@@ -198,7 +198,7 @@ export default function Eligibility() {
 
           {/* Strengths */}
           {result.strengths?.length > 0 && (
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 💪 Your strengths
               </h3>
