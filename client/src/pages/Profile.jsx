@@ -6,7 +6,7 @@ const HELP_TOPICS = ["visa", "housing", "funding", "part-time jobs", "admissions
 
 // Shared input styling
 const inputClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
+  "w-full rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 // A labelled field wrapper so the forms stay tidy.
 function Field({ label, children }) {
@@ -321,7 +321,7 @@ export default function Profile() {
         </div>
       )}
 
-      <div className="mt-6 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
+      <div className="mt-6 glass-card rounded-2xl p-6 shadow-[var(--shadow-card)]">
         {user.role === "mentor" ? (
           <MentorForm user={user} onSave={handleSave} saving={saving} />
         ) : (

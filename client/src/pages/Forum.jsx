@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 
 const inputClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
+  "w-full rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 const timeAgo = (date) => {
   const days = Math.floor((Date.now() - new Date(date)) / 86400000);
@@ -49,7 +49,7 @@ function PostCard({ post, onChanged }) {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
       <div className="flex items-start gap-3">
         {/* Upvote column */}
         <button onClick={() => act("upvote")} disabled={busy}
@@ -143,7 +143,7 @@ function NewPostForm({ onCreated }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+    <form onSubmit={submit} className="space-y-3 glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
       {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
       <input value={form.title} required maxLength={150} placeholder="Title"
         onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputClass} />
