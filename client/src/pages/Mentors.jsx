@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
+import ConnectButton, { useConnectionStatuses } from "../components/Connect";
 
 const inputClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
+  "w-full rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 // Booking form that expands inside a mentor card.
 function BookingForm({ mentor, onDone }) {
@@ -30,7 +31,7 @@ function BookingForm({ mentor, onDone }) {
   };
 
   return (
-    <form onSubmit={book} className="mt-4 space-y-3 rounded-lg bg-slate-50 p-4">
+    <form onSubmit={book} className="mt-4 space-y-3 rounded-lg bg-white/45 p-4">
       {message && (
         <div className={`rounded-lg px-3 py-2 text-sm ${
           message.type === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
@@ -79,7 +80,7 @@ function MentorCard({ mentor }) {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="font-semibold text-ink-900">{mentor.name}</h3>
@@ -118,8 +119,9 @@ function MentorCard({ mentor }) {
         </button>
         <button onClick={openChat}
           className="rounded-lg bg-slate-100 px-4 py-1.5 text-sm font-medium text-ink-700 hover:bg-slate-200">
-          💬 Message
+          Message
         </button>
+        <ConnectButton userId={mentor.id} name={mentor.name} size="md" />
       </div>
 
       {showBooking && <BookingForm mentor={mentor} />}
@@ -136,6 +138,9 @@ export default function Mentors() {
       .then((data) => setMentors(data.mentors))
       .catch((err) => setError(err.message));
   }, []);
+
+  // One bulk status call for every mentor on screen.
+  useConnectionStatuses((mentors ?? []).map((m) => String(m.id)));
 
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">

@@ -172,7 +172,7 @@ export default function SurvivalGuide() {
       <form onSubmit={search} className="mt-5 flex flex-wrap gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)}
           placeholder='University or address (e.g., "University of Toronto, Canada")'
-          className="min-w-64 flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10" />
+          className="min-w-64 flex-1 rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10" />
         <button type="submit" disabled={loading}
           className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white shadow-[var(--shadow-brand)] transition-all hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50">
           {loading ? "Searching…" : "Explore"}
@@ -218,7 +218,7 @@ export default function SurvivalGuide() {
           {Object.entries(CATEGORIES).map(([key, cat]) => {
             const items = result.places[key] ?? [];
             return (
-              <div key={key} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+              <div key={key} className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
                 <h2 className="flex items-center gap-2 font-semibold text-ink-900">
                   <span style={{ color: cat.color }}>●</span> {cat.emoji} {cat.label}
                   <span className="ml-auto text-xs font-normal text-ink-400">

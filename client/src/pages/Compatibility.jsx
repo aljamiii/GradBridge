@@ -50,7 +50,7 @@ export default function Compatibility() {
 
       {/* Priority sliders */}
       <form onSubmit={compute}
-        className="mt-6 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
+        className="mt-6 glass-card rounded-2xl p-6 shadow-[var(--shadow-card)]">
         <div className="grid gap-5 sm:grid-cols-2">
           {COMPONENTS.map((c) => (
             <label key={c.key} className="block">
@@ -85,7 +85,7 @@ export default function Compatibility() {
             </p>
           )}
           {data.results.map((r, i) => (
-            <div key={r.city} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div key={r.city} className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-ink-900">
                   <span className="mr-2 text-ink-400">#{i + 1}</span>

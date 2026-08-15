@@ -139,7 +139,7 @@ export default function DestinationAdvisor() {
       {/* Ask box */}
       <form
         onSubmit={(e) => { e.preventDefault(); ask(); }}
-        className="sticky bottom-4 mt-8 flex gap-2 rounded-2xl border border-slate-200/80 bg-white p-2 shadow-lg">
+        className="sticky bottom-4 mt-8 flex gap-2 glass-card rounded-2xl p-2 shadow-lg">
         <input value={question} onChange={(e) => setQuestion(e.target.value)}
           placeholder="e.g., Are there mosques near KTH in Stockholm?"
           className="flex-1 rounded-lg px-3 py-2 text-ink-900 placeholder-slate-400 focus:outline-none" />

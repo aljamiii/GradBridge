@@ -94,7 +94,9 @@ function FaqItem({ q, a }) {
 function ProductPreview() {
   return (
     <div className="relative mx-auto max-w-4xl">
-      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[var(--shadow-float)]">
+      {/* Deliberately opaque: this is a picture of a screen, so blurring it
+          would break the illusion that you're looking at the product. */}
+      <div className="overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[var(--shadow-float)]">
         {/* window chrome */}
         <div className="flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/80 px-4 py-3">
           <span className="h-2.5 w-2.5 rounded-full bg-red-400" />

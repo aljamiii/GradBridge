@@ -3,6 +3,7 @@
 import Booking from "../models/Booking.js";
 import User from "../models/User.js";
 import { sendSystemMessage } from "./chat.controller.js";
+import { notify } from "../services/notify.js";
 
 const MS_PER_MIN = 60 * 1000;
 
@@ -63,6 +64,15 @@ export const createBooking = async (req, res, next) => {
       mentor._id,
       `📅 Booking request: ${startDate.toLocaleString()} (${duration} min)${topic ? ` — "${topic}"` : ""}`
     );
+
+    await notify({
+      user: mentor._id,
+      type: "booking:requested",
+      title: `${req.user.name} requested a session`,
+      body: `${startDate.toLocaleString()} · ${duration} min${topic ? ` — ${topic}` : ""}`,
+      link: "/bookings",
+      actor: req.user,
+    });
 
     res.status(201).json({ success: true, booking });
   } catch (err) {
@@ -125,6 +135,15 @@ export const setBookingStatus = async (req, res, next) => {
       req.user.role === "mentor" ? booking.student : booking.mentor,
       `${emoji} Session on ${booking.start.toLocaleString()} is now ${status}.`
     );
+
+    await notify({
+      user: req.user.role === "mentor" ? booking.student : booking.mentor,
+      type: `booking:${status}`,
+      title: `Session ${status}`,
+      body: `${booking.start.toLocaleString()} — ${status} by ${req.user.name}.`,
+      link: "/bookings",
+      actor: req.user,
+    });
 
     res.json({ success: true, booking });
   } catch (err) {

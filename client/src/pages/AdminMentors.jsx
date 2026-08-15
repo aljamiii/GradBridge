@@ -11,7 +11,7 @@ const statusBadge = {
 
 function MentorCard({ mentor, onDecide, busy }) {
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="font-semibold text-ink-900">{mentor.name}</h3>

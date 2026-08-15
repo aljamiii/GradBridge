@@ -4,11 +4,11 @@ import { api } from "../lib/api";
 const ACCENT = "#4f46e5"; // validated single-series accent (see ForumInsights)
 
 const inputClass =
-  "rounded-lg border border-slate-300 px-3 py-2 text-sm text-ink-900 focus:border-brand-500 focus:outline-none";
+  "rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none";
 
 function StatTile({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
       <p className="text-sm text-ink-500">{label}</p>
       <p className="mt-1 text-3xl font-bold text-ink-900">{value}</p>
       {hint && <p className="mt-0.5 text-xs text-ink-400">{hint}</p>}
@@ -110,7 +110,7 @@ export default function SuccessPath() {
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             {/* Acceptance rate by CGPA range */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 Acceptance rate by CGPA range
               </h2>
@@ -131,7 +131,7 @@ export default function SuccessPath() {
             </div>
 
             {/* Funding distribution */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 How admitted students were funded
               </h2>
@@ -143,7 +143,7 @@ export default function SuccessPath() {
             </div>
 
             {/* Admission patterns by country */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm lg:col-span-2">
+            <div className="glass-card rounded-2xl p-5 shadow-sm lg:col-span-2">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 Admission patterns by destination
               </h2>
@@ -162,7 +162,7 @@ export default function SuccessPath() {
             {showTable ? "Hide" : "Show"} the underlying records ({data.records.length})
           </button>
           {showTable && (
-            <div className="mt-2 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-[var(--shadow-card)]">
+            <div className="mt-2 overflow-x-auto glass-card rounded-2xl">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-ink-400">
