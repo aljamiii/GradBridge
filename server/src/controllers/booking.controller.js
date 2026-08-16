@@ -7,6 +7,21 @@ import { notify } from "../services/notify.js";
 
 const MS_PER_MIN = 60 * 1000;
 
+// Human-readable session time for notification and chat text.
+// toLocaleString() on the server renders "9/6/2026, 4:00:00 PM" — ambiguous
+// (6 September or 9 June?), and the seconds are noise. Naming the weekday and
+// month leaves no room for misreading.
+const sessionWhen = (d) =>
+  new Date(d).toLocaleString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
 // POST /api/bookings   body: { mentorId, start, durationMins, topic }  (student)
 export const createBooking = async (req, res, next) => {
   try {
@@ -62,14 +77,14 @@ export const createBooking = async (req, res, next) => {
     await sendSystemMessage(
       req.user._id,
       mentor._id,
-      `📅 Booking request: ${startDate.toLocaleString()} (${duration} min)${topic ? ` — "${topic}"` : ""}`
+      `📅 Booking request: ${sessionWhen(startDate)} (${duration} min)${topic ? ` — "${topic}"` : ""}`
     );
 
     await notify({
       user: mentor._id,
       type: "booking:requested",
       title: `${req.user.name} requested a session`,
-      body: `${startDate.toLocaleString()} · ${duration} min${topic ? ` — ${topic}` : ""}`,
+      body: `${sessionWhen(startDate)} · ${duration} min${topic ? ` — ${topic}` : ""}`,
       link: "/bookings",
       actor: req.user,
     });
@@ -181,14 +196,14 @@ export const setBookingStatus = async (req, res, next) => {
     await sendSystemMessage(
       req.user._id,
       req.user.role === "mentor" ? booking.student : booking.mentor,
-      `${emoji} Session on ${booking.start.toLocaleString()} is now ${status}.`
+      `${emoji} Session on ${sessionWhen(booking.start)} is now ${status}.`
     );
 
     await notify({
       user: req.user.role === "mentor" ? booking.student : booking.mentor,
       type: `booking:${status}`,
       title: `Session ${status}`,
-      body: `${booking.start.toLocaleString()} — ${status} by ${req.user.name}.`,
+      body: `${sessionWhen(booking.start)} — ${status} by ${req.user.name}.`,
       link: "/bookings",
       actor: req.user,
     });

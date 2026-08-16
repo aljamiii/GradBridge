@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
+import { getSocket } from "../lib/socket";
 import { useAuth } from "../context/AuthContext";
 import Icon from "../components/Icon";
 import { Avatar, EmptyState, Skeleton, cx } from "../components/ui";
@@ -220,6 +221,19 @@ export default function Bookings() {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // A page called "Session requests" should not need a manual refresh to show
+  // a request that just arrived. The booking notification already reaches this
+  // user's personal socket room, so reuse it as the reload trigger.
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    const onNotification = (n) => {
+      if (String(n?.type ?? "").startsWith("booking:")) load();
+    };
+    socket.on("notification:new", onNotification);
+    return () => socket.off("notification:new", onNotification);
   }, [load]);
 
   const setStatus = async (id, status) => {
