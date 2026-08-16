@@ -15,21 +15,21 @@ function Exchange({ item }) {
     <div className="space-y-3">
       {/* Student's question */}
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-indigo-600 px-4 py-2.5 text-sm text-white">
+        <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-brand-600 px-4 py-2.5 text-sm text-white">
           {item.question}
         </div>
       </div>
 
       {/* Advisor's answer */}
       <div className="flex justify-start">
-        <div className="max-w-[85%] rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div className="max-w-[85%] rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-4 py-3 shadow-[var(--shadow-card)]">
           {item.loading ? (
-            <p className="text-sm text-slate-400">🤖 Consulting the guides…</p>
+            <p className="text-sm text-ink-400">🤖 Consulting the guides…</p>
           ) : item.error ? (
             <p className="text-sm text-red-600">{item.error}</p>
           ) : (
             <>
-              <p className="whitespace-pre-wrap text-sm text-slate-700">{item.answer}</p>
+              <p className="whitespace-pre-wrap text-sm text-ink-700">{item.answer}</p>
 
               {/* Live weather chip */}
               {item.weather && (
@@ -42,12 +42,12 @@ function Exchange({ item }) {
               {/* Retrieved sources — the proof this is RAG, not memory */}
               {item.sources?.length > 0 && (
                 <div className="mt-3 border-t border-slate-100 pt-2">
-                  <span className="text-xs font-medium text-slate-400">
+                  <span className="text-xs font-medium text-ink-400">
                     📚 Answered from:{" "}
                   </span>
                   {item.sources.map((s, i) => (
                     <span key={i}
-                      className="mr-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                      className="mr-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-ink-500">
                       {s.city} · {s.topic} ({Math.round(s.similarity * 100)}%)
                     </span>
                   ))}
@@ -99,9 +99,9 @@ export default function DestinationAdvisor() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-800">🌍 Destination Advisor</h1>
-      <p className="mt-1 text-slate-500">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Destination Advisor</h1>
+      <p className="mt-1 text-ink-500">
         Ask anything about living in your target city — answers come from curated
         guides for Bangladeshi students plus live weather data (RAG).
       </p>
@@ -111,7 +111,7 @@ export default function DestinationAdvisor() {
         <div className="mt-6 flex flex-wrap gap-2">
           {SUGGESTIONS.map((s) => (
             <button key={s} onClick={() => ask(s)}
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-600 hover:border-indigo-400 hover:text-indigo-600">
+              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-600 hover:border-brand-400 hover:text-brand-600">
               {s}
             </button>
           ))}
@@ -128,17 +128,17 @@ export default function DestinationAdvisor() {
       {/* Ask box */}
       <form
         onSubmit={(e) => { e.preventDefault(); ask(); }}
-        className="sticky bottom-4 mt-8 flex gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+        className="sticky bottom-4 mt-8 flex gap-2 glass-card rounded-2xl p-2 shadow-lg">
         <input value={question} onChange={(e) => setQuestion(e.target.value)}
           placeholder="e.g., Are there mosques near KTH in Stockholm?"
-          className="flex-1 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none" />
+          className="flex-1 rounded-lg px-3 py-2 text-ink-900 placeholder-slate-400 focus:outline-none" />
         <button type="submit" disabled={busy || !question.trim()}
-          className="rounded-lg bg-indigo-600 px-5 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white shadow-[var(--shadow-brand)] transition-all hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50">
           {busy ? "…" : "Ask"}
         </button>
       </form>
 
-      <p className="mt-3 text-center text-xs text-slate-400">
+      <p className="mt-3 text-center text-xs text-ink-400">
         Guides currently cover: Toronto · London · Berlin · Melbourne · Kuala Lumpur · Stockholm
       </p>
     </div>

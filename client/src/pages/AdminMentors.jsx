@@ -11,11 +11,11 @@ const statusBadge = {
 
 function MentorCard({ mentor, onDecide, busy }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="font-semibold text-slate-800">{mentor.name}</h3>
-          <p className="text-sm text-slate-500">
+          <h3 className="font-semibold text-ink-900">{mentor.name}</h3>
+          <p className="text-sm text-ink-500">
             {mentor.email}
             {mentor.phone ? ` · ${mentor.phone}` : ""}
           </p>
@@ -31,22 +31,22 @@ function MentorCard({ mentor, onDecide, busy }) {
 
       <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
         <div>
-          <dt className="inline font-medium text-slate-500">Qualification: </dt>
-          <dd className="inline text-slate-700">{mentor.qualification || "—"}</dd>
+          <dt className="inline font-medium text-ink-500">Qualification: </dt>
+          <dd className="inline text-ink-700">{mentor.qualification || "—"}</dd>
         </div>
         <div>
-          <dt className="inline font-medium text-slate-500">University: </dt>
-          <dd className="inline text-slate-700">{mentor.university || "—"}</dd>
+          <dt className="inline font-medium text-ink-500">University: </dt>
+          <dd className="inline text-ink-700">{mentor.university || "—"}</dd>
         </div>
         <div>
-          <dt className="inline font-medium text-slate-500">Expertise: </dt>
-          <dd className="inline text-slate-700">
+          <dt className="inline font-medium text-ink-500">Expertise: </dt>
+          <dd className="inline text-ink-700">
             {mentor.expertise?.length ? mentor.expertise.join(", ") : "—"}
           </dd>
         </div>
         <div>
-          <dt className="inline font-medium text-slate-500">Availability: </dt>
-          <dd className="inline text-slate-700">{mentor.availability || "—"}</dd>
+          <dt className="inline font-medium text-ink-500">Availability: </dt>
+          <dd className="inline text-ink-700">{mentor.availability || "—"}</dd>
         </div>
       </dl>
 
@@ -114,9 +114,9 @@ export default function AdminMentors() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-800">🛡️ Mentor Verification</h1>
-      <p className="mt-1 text-slate-500">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Mentor Verification</h1>
+      <p className="mt-1 text-ink-500">
         Review mentor applications. Only approved mentors appear in student searches.
       </p>
 
@@ -128,7 +128,7 @@ export default function AdminMentors() {
             onClick={() => setTab(t)}
             className={`rounded-lg px-4 py-1.5 text-sm font-medium capitalize ${
               tab === t
-                ? "bg-indigo-600 text-white"
+                ? "bg-brand-600 text-white"
                 : "bg-white text-slate-600 hover:bg-slate-100"
             }`}
           >
@@ -145,9 +145,9 @@ export default function AdminMentors() {
 
       <div className="mt-4 space-y-4">
         {loading ? (
-          <p className="py-10 text-center text-slate-400">Loading…</p>
+          <p className="py-10 text-center text-ink-400">Loading…</p>
         ) : mentors.length === 0 ? (
-          <p className="py-10 text-center text-slate-400">
+          <p className="py-10 text-center text-ink-400">
             No {tab === "all" ? "" : tab} mentor applications.
           </p>
         ) : (

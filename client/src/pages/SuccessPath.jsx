@@ -4,14 +4,14 @@ import { api } from "../lib/api";
 const ACCENT = "#4f46e5"; // validated single-series accent (see ForumInsights)
 
 const inputClass =
-  "rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none";
+  "rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none";
 
 function StatTile({ label, value, hint }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-3xl font-bold text-slate-800">{value}</p>
-      {hint && <p className="mt-0.5 text-xs text-slate-400">{hint}</p>}
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
+      <p className="text-sm text-ink-500">{label}</p>
+      <p className="mt-1 text-3xl font-bold text-ink-900">{value}</p>
+      {hint && <p className="mt-0.5 text-xs text-ink-400">{hint}</p>}
     </div>
   );
 }
@@ -25,7 +25,7 @@ function Bar({ label, value, max, format }) {
         <div className="h-full rounded-r transition-opacity group-hover:opacity-80"
           style={{ width: `${max ? (value / max) * 100 : 0}%`, background: ACCENT }} />
       </div>
-      <span className="w-14 shrink-0 text-right text-sm font-medium text-slate-700">
+      <span className="w-14 shrink-0 text-right text-sm font-medium text-ink-700">
         {format(value)}
       </span>
     </div>
@@ -56,9 +56,9 @@ export default function SuccessPath() {
     : 1;
 
   return (
-    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-800">📈 Success Path Explorer</h1>
-      <p className="mt-1 text-slate-500">
+    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10 sm:px-6 sm:py-10">
+      <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Success Path Explorer</h1>
+      <p className="mt-1 text-ink-500">
         Real admission records from students who came before you — filter by your
         background to see honest odds.
       </p>
@@ -92,9 +92,9 @@ export default function SuccessPath() {
       )}
 
       {!data ? (
-        <p className="py-16 text-center text-slate-400">Loading records…</p>
+        <p className="py-16 text-center text-ink-400">Loading records…</p>
       ) : data.totals.records === 0 ? (
-        <p className="py-16 text-center text-slate-400">
+        <p className="py-16 text-center text-ink-400">
           No records match these filters — widen the CGPA range.
         </p>
       ) : (
@@ -110,29 +110,29 @@ export default function SuccessPath() {
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             {/* Acceptance rate by CGPA range */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 Acceptance rate by CGPA range
               </h2>
               <div className="mt-4 flex h-36 items-end gap-3">
                 {data.cgpaBuckets.map((b) => (
                   <div key={b.label} className="group flex flex-1 flex-col items-center gap-1"
                     title={`${b.label}: ${b.admitted}/${b.total} admitted (${b.rate}%)`}>
-                    <span className="text-xs font-medium text-slate-700">
+                    <span className="text-xs font-medium text-ink-700">
                       {b.total ? `${b.rate}%` : "—"}
                     </span>
                     <div className="w-full rounded-t transition-opacity group-hover:opacity-80"
                       style={{ height: `${b.rate}%`, minHeight: b.total ? 3 : 0, background: ACCENT }} />
-                    <span className="text-[10px] text-slate-400">{b.label}</span>
+                    <span className="text-[10px] text-ink-400">{b.label}</span>
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-slate-400">n = {data.totals.records} applications</p>
+              <p className="mt-2 text-xs text-ink-400">n = {data.totals.records} applications</p>
             </div>
 
             {/* Funding distribution */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 How admitted students were funded
               </h2>
               <div className="mt-4 space-y-2.5">
@@ -143,8 +143,8 @@ export default function SuccessPath() {
             </div>
 
             {/* Admission patterns by country */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <div className="glass-card rounded-2xl p-5 shadow-sm lg:col-span-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 Admission patterns by destination
               </h2>
               <div className="mt-4 space-y-2.5">
@@ -158,14 +158,14 @@ export default function SuccessPath() {
 
           {/* Records table */}
           <button onClick={() => setShowTable(!showTable)}
-            className="mt-4 text-sm font-medium text-indigo-600 hover:underline">
+            className="mt-4 text-sm font-medium text-brand-600 hover:underline">
             {showTable ? "Hide" : "Show"} the underlying records ({data.records.length})
           </button>
           {showTable && (
-            <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="mt-2 overflow-x-auto glass-card rounded-2xl">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400">
+                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-ink-400">
                     {["Year", "Field", "CGPA", "IELTS", "University", "Country", "Funding", "Outcome"].map((h) => (
                       <th key={h} className="px-3 py-2 font-semibold">{h}</th>
                     ))}
@@ -176,7 +176,7 @@ export default function SuccessPath() {
                     <tr key={i} className="border-b border-slate-100">
                       <td className="px-3 py-2 text-slate-600">{r.year}</td>
                       <td className="px-3 py-2 text-slate-600">{r.field}</td>
-                      <td className="px-3 py-2 font-medium text-slate-800">{r.cgpa}</td>
+                      <td className="px-3 py-2 font-medium text-ink-900">{r.cgpa}</td>
                       <td className="px-3 py-2 text-slate-600">{r.ielts}</td>
                       <td className="px-3 py-2 text-slate-600">{r.university}</td>
                       <td className="px-3 py-2 text-slate-600">{r.country}</td>
@@ -197,7 +197,7 @@ export default function SuccessPath() {
             </div>
           )}
 
-          <p className="mt-4 text-xs text-slate-400">
+          <p className="mt-4 text-xs text-ink-400">
             Data source: alumni records sheet (Google Sheets) — anonymized. Past
             admissions don&apos;t guarantee future outcomes.
           </p>

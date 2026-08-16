@@ -8,9 +8,9 @@ const ACCENT = "#4f46e5";
 // Headline stat tile — a number's job is to be read, not charted.
 function StatTile({ label, value, emoji }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-sm text-slate-500">{emoji} {label}</p>
-      <p className="mt-1 text-3xl font-bold text-slate-800">{value}</p>
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
+      <p className="text-sm text-ink-500">{emoji} {label}</p>
+      <p className="mt-1 text-3xl font-bold text-ink-900">{value}</p>
     </div>
   );
 }
@@ -19,10 +19,10 @@ function StatTile({ label, value, emoji }) {
 function BarList({ title, items, valueKey, labelKey, format = (v) => v, prefix = "" }) {
   const max = Math.max(...items.map((i) => i[valueKey]), 1);
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">{title}</h2>
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">{title}</h2>
       {items.length === 0 ? (
-        <p className="mt-3 text-sm text-slate-400">Not enough data yet.</p>
+        <p className="mt-3 text-sm text-ink-400">Not enough data yet.</p>
       ) : (
         <div className="mt-3 space-y-2.5">
           {items.map((item) => (
@@ -37,7 +37,7 @@ function BarList({ title, items, valueKey, labelKey, format = (v) => v, prefix =
                   style={{ width: `${(item[valueKey] / max) * 100}%`, background: ACCENT }}
                 />
               </div>
-              <span className="w-12 shrink-0 text-right text-sm font-medium text-slate-700">
+              <span className="w-12 shrink-0 text-right text-sm font-medium text-ink-700">
                 {format(item[valueKey])}
               </span>
             </div>
@@ -52,18 +52,18 @@ function BarList({ title, items, valueKey, labelKey, format = (v) => v, prefix =
 function MonthColumns({ items }) {
   const max = Math.max(...items.map((i) => i.posts), 1);
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+    <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
         Seasonal trend — posts per month
       </h2>
       {items.length === 0 ? (
-        <p className="mt-3 text-sm text-slate-400">Not enough data yet.</p>
+        <p className="mt-3 text-sm text-ink-400">Not enough data yet.</p>
       ) : (
         <div className="mt-4 flex h-36 items-end gap-1.5">
           {items.map((m) => (
             <div key={m.label} className="group flex flex-1 flex-col items-center gap-1"
               title={`${m.label}: ${m.posts} post${m.posts !== 1 ? "s" : ""}`}>
-              <span className="text-xs font-medium text-slate-700 opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="text-xs font-medium text-ink-700 opacity-0 transition-opacity group-hover:opacity-100">
                 {m.posts}
               </span>
               <div
@@ -74,7 +74,7 @@ function MonthColumns({ items }) {
                   background: ACCENT,
                 }}
               />
-              <span className="text-[10px] text-slate-400">{m.label}</span>
+              <span className="text-[10px] text-ink-400">{m.label}</span>
             </div>
           ))}
         </div>
@@ -94,15 +94,15 @@ export default function ForumInsights() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-10">
+    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10 sm:px-6 sm:py-10">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">📊 Community Insights</h1>
-          <p className="mt-1 text-slate-500">
+          <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Community Insights</h1>
+          <p className="mt-1 text-ink-500">
             What the community is talking about — computed live from forum activity.
           </p>
         </div>
-        <Link to="/forum" className="text-sm font-medium text-indigo-600 hover:underline">
+        <Link to="/forum" className="text-sm font-medium text-brand-600 hover:underline">
           ← Back to forum
         </Link>
       </div>
@@ -112,7 +112,7 @@ export default function ForumInsights() {
       )}
 
       {!data ? (
-        <p className="py-16 text-center text-slate-400">Crunching the numbers…</p>
+        <p className="py-16 text-center text-ink-400">Crunching the numbers…</p>
       ) : (
         <>
           {/* Headline numbers */}
@@ -133,7 +133,7 @@ export default function ForumInsights() {
             <MonthColumns items={data.byMonth} />
           </div>
 
-          <p className="mt-4 text-xs text-slate-400">
+          <p className="mt-4 text-xs text-ink-400">
             All figures aggregate live forum data (MongoDB aggregation pipelines).
           </p>
         </>

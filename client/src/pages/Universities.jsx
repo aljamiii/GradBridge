@@ -1,55 +1,77 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../lib/api";
+import Icon from "../components/Icon";
+import {
+  Alert, Badge, Button, Card, EmptyState, Field, Input, Page, PageHeader, Skeleton, cx,
+} from "../components/ui";
 
-const inputClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none";
+/* ----------------------------------------------------------------- pieces */
 
-// ---------- One search result row ----------
-function ResultCard({ uni, savedNames, onSave, busy }) {
-  const alreadySaved = savedNames.has(uni.name);
+// Universities have no logos in the free Hipolabs data, so we generate a
+// stable monogram from the name — gives every card a consistent anchor.
+function Monogram({ name }) {
+  const initials = (name ?? "")
+    .replace(/^(The|University of|Universite|Universidad)\s+/i, "")
+    .split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((w) => w[0]).join("").toUpperCase();
+  // Deterministic hue from the name so the same school is always the same colour.
+  const hue = [...(name ?? "")].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div>
-        <h3 className="font-semibold text-slate-800">
-          {uni.name}
-          {uni.popular && (
-            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-              ⭐ Popular
-            </span>
-          )}
-        </h3>
-        <p className="text-sm text-slate-500">
-          {[uni.stateProvince, uni.country].filter(Boolean).join(", ")}
-          {uni.website && (
-            <>
-              {" · "}
-              <a href={uni.website} target="_blank" rel="noreferrer"
-                className="text-indigo-600 hover:underline">
-                website ↗
-              </a>
-            </>
-          )}
-        </p>
-      </div>
-      <button
-        onClick={() => onSave(uni)}
-        disabled={busy || alreadySaved}
-        className={`rounded-lg px-4 py-1.5 text-sm font-medium ${
-          alreadySaved
-            ? "bg-slate-100 text-slate-400"
-            : "bg-indigo-600 text-white hover:bg-indigo-700"
-        } disabled:opacity-70`}
-      >
-        {alreadySaved ? "★ Saved" : "☆ Save"}
-      </button>
-    </div>
+    <span
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
+      style={{ background: `linear-gradient(135deg, hsl(${hue} 62% 55%), hsl(${(hue + 40) % 360} 62% 42%))` }}
+      aria-hidden="true"
+    >
+      {initials || "U"}
+    </span>
   );
 }
 
-// ---------- One favorite row (edit notes / remove) ----------
+function Location({ item }) {
+  const place = [item.stateProvince, item.country].filter(Boolean).join(", ");
+  return (
+    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-400">
+      <span className="flex items-center gap-1">
+        <Icon name="location" className="h-3.5 w-3.5" /> {place || "—"}
+      </span>
+      {item.website && (
+        <a href={item.website} target="_blank" rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-1 text-brand-600 hover:underline">
+          <Icon name="external" className="h-3.5 w-3.5" /> Website
+        </a>
+      )}
+    </p>
+  );
+}
+
+function ResultCard({ uni, saved, onSave, busy }) {
+  return (
+    <Card hover className="!p-4">
+      <div className="flex items-start gap-3.5">
+        <Monogram name={uni.name} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold leading-snug text-ink-900">{uni.name}</h3>
+            {uni.popular && <Badge tone="amber">Popular</Badge>}
+          </div>
+          <Location item={uni} />
+        </div>
+        <Button size="sm" variant={saved ? "secondary" : "primary"}
+          disabled={busy || saved} onClick={() => onSave(uni)} className="shrink-0">
+          <Icon name={saved ? "check" : "star"} className="h-3.5 w-3.5"
+            strokeWidth={saved ? 2.4 : 1.8} />
+          {saved ? "Saved" : "Save"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 function FavoriteCard({ fav, onUpdateNotes, onRemove, busy }) {
   const [editing, setEditing] = useState(false);
-  const [notes, setNotes] = useState(fav.notes);
+  const [notes, setNotes] = useState(fav.notes ?? "");
 
   const save = async () => {
     await onUpdateNotes(fav._id, notes);
@@ -57,53 +79,47 @@ function FavoriteCard({ fav, onUpdateNotes, onRemove, busy }) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="font-semibold text-slate-800">{fav.name}</h3>
-          <p className="text-sm text-slate-500">
-            {[fav.stateProvince, fav.country].filter(Boolean).join(", ")}
-            {fav.website && (
-              <>
-                {" · "}
-                <a href={fav.website} target="_blank" rel="noreferrer"
-                  className="text-indigo-600 hover:underline">
-                  website ↗
-                </a>
-              </>
-            )}
-          </p>
+    <Card className="!p-4">
+      <div className="flex items-start gap-3.5">
+        <Monogram name={fav.name} />
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold leading-snug text-ink-900">{fav.name}</h3>
+          <Location item={fav} />
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setEditing(!editing)} disabled={busy}
-            className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50">
-            {editing ? "Cancel" : fav.notes ? "Edit note" : "Add note"}
-          </button>
-          <button onClick={() => onRemove(fav._id)} disabled={busy}
-            className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100 disabled:opacity-50">
-            Remove
-          </button>
+        <div className="flex shrink-0 gap-1.5">
+          <Button size="sm" variant="ghost" disabled={busy}
+            onClick={() => { setNotes(fav.notes ?? ""); setEditing(!editing); }}>
+            <Icon name="settings" className="h-3.5 w-3.5" />
+            {editing ? "Cancel" : fav.notes ? "Edit" : "Note"}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy}
+            onClick={() => onRemove(fav._id)}
+            className="text-red-600 hover:bg-red-50">
+            <Icon name="close" className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
 
       {editing ? (
-        <div className="mt-3 flex gap-2">
-          <input value={notes} onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g., Has full funding for ML students; deadline Dec 1"
-            maxLength={500} className={inputClass} />
-          <button onClick={save} disabled={busy}
-            className="shrink-0 rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
-            Save note
-          </button>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500}
+            placeholder="Full funding for ML students · deadline Dec 1"
+            className="min-w-48 flex-1" />
+          <Button size="sm" onClick={save} disabled={busy}>Save note</Button>
         </div>
       ) : (
-        fav.notes && <p className="mt-2 text-sm text-slate-600">📝 {fav.notes}</p>
+        fav.notes && (
+          <p className="glass-inset mt-3 rounded-lg px-3 py-2 text-sm leading-relaxed text-ink-500">
+            {fav.notes}
+          </p>
+        )
       )}
-    </div>
+    </Card>
   );
 }
 
-// ---------- The page ----------
+/* ------------------------------------------------------------------- page */
+
 export default function Universities() {
   const [name, setName] = useState("");
   const [country, setCountry] = useState("");
@@ -112,26 +128,27 @@ export default function Universities() {
   const [searching, setSearching] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [tab, setTab] = useState("results");
 
-  // Load favorites once on page open.
   useEffect(() => {
     api("/api/favorites")
-      .then((data) => setFavorites(data.favorites))
+      .then((d) => setFavorites(d.favorites))
       .catch((err) => setError(err.message));
   }, []);
 
-  const savedNames = new Set(favorites.map((f) => f.name));
+  const savedNames = useMemo(() => new Set(favorites.map((f) => f.name)), [favorites]);
 
   const search = async (e) => {
     e.preventDefault();
     setSearching(true);
     setError("");
+    setTab("results");
     try {
       const params = new URLSearchParams();
       if (name) params.set("name", name);
       if (country) params.set("country", country);
-      const data = await api(`/api/universities/search?${params}`);
-      setResults(data.universities);
+      const d = await api(`/api/universities/search?${params}`);
+      setResults(d.universities);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -139,105 +156,153 @@ export default function Universities() {
     }
   };
 
-  const saveFavorite = async (uni) => {
+  const run = async (fn) => {
     setBusy(true);
     setError("");
-    try {
-      const data = await api("/api/favorites", { method: "POST", body: uni });
-      setFavorites([data.favorite, ...favorites]);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
+    try { await fn(); } catch (err) { setError(err.message); } finally { setBusy(false); }
   };
 
-  const updateNotes = async (id, notes) => {
-    setBusy(true);
-    setError("");
-    try {
-      const data = await api(`/api/favorites/${id}`, { method: "PUT", body: { notes } });
-      setFavorites(favorites.map((f) => (f._id === id ? data.favorite : f)));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const saveFavorite = (uni) => run(async () => {
+    const d = await api("/api/favorites", { method: "POST", body: uni });
+    setFavorites((f) => [d.favorite, ...f]);
+  });
 
-  const removeFavorite = async (id) => {
-    setBusy(true);
-    setError("");
-    try {
-      await api(`/api/favorites/${id}`, { method: "DELETE" });
-      setFavorites(favorites.filter((f) => f._id !== id));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const updateNotes = (id, notes) => run(async () => {
+    const d = await api(`/api/favorites/${id}`, { method: "PUT", body: { notes } });
+    setFavorites((f) => f.map((x) => (x._id === id ? d.favorite : x)));
+  });
+
+  const removeFavorite = (id) => run(async () => {
+    await api(`/api/favorites/${id}`, { method: "DELETE" });
+    setFavorites((f) => f.filter((x) => x._id !== id));
+  });
+
+  const showing = tab === "results" ? results : favorites;
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-800">🎓 University Explorer</h1>
-      <p className="mt-1 text-slate-500">
-        Search universities worldwide and save the ones you&apos;re targeting.
-      </p>
+    <Page width="6xl">
+      <PageHeader
+        eyebrow="Module 3 · Hipolabs API"
+        title="University Explorer"
+        description="Search 9,000+ universities worldwide, shortlist the ones you're targeting, and keep a private note on each."
+        actions={
+          favorites.length > 0 && (
+            <Button to="/survival-guide" variant="secondary">
+              <Icon name="compass" className="h-4 w-4" /> Explore a campus area
+            </Button>
+          )
+        }
+      />
 
-      {/* Search form */}
-      <form onSubmit={search} className="mt-6 flex flex-wrap gap-2">
-        <input value={name} onChange={(e) => setName(e.target.value)}
-          placeholder="University name (e.g., Toronto)" className={`${inputClass} flex-1 min-w-40`} />
-        <input value={country} onChange={(e) => setCountry(e.target.value)}
-          placeholder="Country (e.g., Canada)" className={`${inputClass} flex-1 min-w-40`} />
-        <button type="submit" disabled={searching}
-          className="rounded-lg bg-indigo-600 px-5 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
-          {searching ? "Searching…" : "Search"}
-        </button>
-      </form>
-
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
-
-      {/* Results */}
-      {results && (
-        <section className="mt-6">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
-            Results ({results.length})
-          </h2>
-          {results.length === 0 ? (
-            <p className="text-slate-400">No universities matched that search.</p>
-          ) : (
-            <div className="space-y-3">
-              {results.map((uni) => (
-                <ResultCard key={uni.name + uni.country} uni={uni}
-                  savedNames={savedNames} onSave={saveFavorite} busy={busy} />
-              ))}
+      <div className="mt-8 grid gap-6 lg:grid-cols-4">
+        {/* --------------------------------------------------- search rail */}
+        <div className="lg:col-span-1">
+          <Card as="form" onSubmit={search} className="lg:sticky lg:top-24">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.08em] text-ink-400">
+              Search
+            </p>
+            <div className="space-y-4">
+              <Field label="University name">
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Toronto" />
+              </Field>
+              <Field label="Country" hint="Either field alone works.">
+                <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Canada" />
+              </Field>
             </div>
-          )}
-        </section>
-      )}
+            <Button type="submit" className="mt-5 w-full" loading={searching}>
+              {searching ? "Searching…" : "Search"}
+            </Button>
 
-      {/* Favorites */}
-      <section className="mt-10">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
-          ★ My Favorites ({favorites.length})
-        </h2>
-        {favorites.length === 0 ? (
-          <p className="text-slate-400">
-            Nothing saved yet — search above and hit ☆ Save.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {favorites.map((fav) => (
-              <FavoriteCard key={fav._id} fav={fav} onUpdateNotes={updateNotes}
-                onRemove={removeFavorite} busy={busy} />
+            <div className="mt-5 border-t border-white/60 pt-4">
+              <p className="flex items-center justify-between text-sm">
+                <span className="text-ink-400">Shortlisted</span>
+                <span className="font-bold text-ink-900">{favorites.length}</span>
+              </p>
+            </div>
+          </Card>
+        </div>
+
+        {/* ------------------------------------------------------ results */}
+        <div className="lg:col-span-3">
+          {/* tabs */}
+          <div className="mb-4 flex gap-1 rounded-xl bg-white/50 p-1 backdrop-blur-sm ring-1 ring-white/60">
+            {[
+              { id: "results", label: "Search results", count: results?.length },
+              { id: "saved", label: "My shortlist", count: favorites.length },
+            ].map((t) => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={cx(
+                  "flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
+                  tab === t.id ? "bg-white text-brand-700 shadow-sm" : "text-ink-400 hover:text-ink-700"
+                )}>
+                {t.label}
+                {t.count != null && (
+                  <span className={cx("ml-1.5 text-xs", tab === t.id ? "text-brand-500" : "text-ink-400")}>
+                    {t.count}
+                  </span>
+                )}
+              </button>
             ))}
           </div>
-        )}
-      </section>
-    </div>
+
+          {error && <Alert tone="error" className="mb-4">{error}</Alert>}
+
+          {searching && tab === "results" && (
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)}
+            </div>
+          )}
+
+          {!searching && tab === "results" && (
+            results == null ? (
+              <Card>
+                <EmptyState
+                  icon={<Icon name="search" className="h-6 w-6" />}
+                  title="Search to begin"
+                  description="Enter a university name, a country, or both. Results come live from the Hipolabs universities API."
+                />
+              </Card>
+            ) : results.length === 0 ? (
+              <Card>
+                <EmptyState
+                  icon={<Icon name="search" className="h-6 w-6" />}
+                  title="Nothing matched"
+                  description="Try a shorter name — “Toronto” finds more than “University of Toronto Scarborough”."
+                />
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {/* Index is part of the key: Hipolabs can return two entries
+                    with the same name+country (campuses, duplicates). */}
+                {results.map((uni, i) => (
+                  <ResultCard key={`${uni.name}|${uni.country}|${i}`} uni={uni}
+                    saved={savedNames.has(uni.name)} onSave={saveFavorite} busy={busy} />
+                ))}
+              </div>
+            )
+          )}
+
+          {tab === "saved" && (
+            favorites.length === 0 ? (
+              <Card>
+                <EmptyState
+                  icon={<Icon name="star" className="h-6 w-6" />}
+                  title="Your shortlist is empty"
+                  description="Save universities from the search results. Notes you add here show up nowhere else — they're just for you."
+                  action={<Button onClick={() => setTab("results")} variant="secondary">Back to search</Button>}
+                />
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {favorites.map((fav) => (
+                  <FavoriteCard key={fav._id} fav={fav} onUpdateNotes={updateNotes}
+                    onRemove={removeFavorite} busy={busy} />
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      </div>
+    </Page>
   );
 }

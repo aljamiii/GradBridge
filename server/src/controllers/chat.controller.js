@@ -5,29 +5,31 @@ import Message from "../models/Message.js";
 import User from "../models/User.js";
 import { getIO } from "../socket.js";
 
-// Find or create the single conversation between a student and a mentor.
-// Accepts the two user ids in either order + roles are validated.
+// Find or create the single conversation between any two users (peer-to-peer:
+// student↔mentor for bookings, student↔student via the map's "Say hi").
+// Accepts the two user ids in either order.
 export const getOrCreateConversation = async (userA, userB) => {
+  if (String(userA) === String(userB)) {
+    throw Object.assign(new Error("You can't chat with yourself."), { statusCode: 400 });
+  }
   const [a, b] = await Promise.all([User.findById(userA), User.findById(userB)]);
   if (!a || !b) throw Object.assign(new Error("User not found."), { statusCode: 404 });
 
-  const student = a.role === "student" ? a : b;
-  const mentor = a.role === "mentor" ? a : b;
-  if (student.role !== "student" || mentor.role !== "mentor") {
-    throw Object.assign(new Error("Chat is between a student and a mentor."), { statusCode: 400 });
-  }
-
-  let convo = await Conversation.findOne({ student: student._id, mentor: mentor._id });
-  convo ??= await Conversation.create({ student: student._id, mentor: mentor._id });
-  return convo;
+  // Atomic find-or-create: upsert on the unique pairKey, so two simultaneous
+  // "Say hi" clicks can never create two threads for the same pair.
+  const pairKey = Conversation.pairKeyFor(a._id, b._id);
+  return Conversation.findOneAndUpdate(
+    { pairKey },
+    { $setOnInsert: { participants: [a._id, b._id], pairKey } },
+    { new: true, upsert: true }
+  );
 };
 
 // Save a message + update the inbox preview + push it live over sockets.
 export const deliverMessage = async ({ conversation, sender, text, isSystem = false }) => {
-  const recipient =
-    String(conversation.student) === String(sender)
-      ? conversation.mentor
-      : conversation.student;
+  const recipient = conversation.participants.find(
+    (p) => String(p) !== String(sender)
+  );
 
   const message = await Message.create({
     conversation: conversation._id,
@@ -41,12 +43,15 @@ export const deliverMessage = async ({ conversation, sender, text, isSystem = fa
   conversation.lastMessageText = isSystem ? text : text.slice(0, 80);
   await conversation.save();
 
-  // Live delivery: everyone viewing this thread + the recipient's personal
-  // room (for the navbar unread badge, even if they're on another page).
+  // Live delivery: everyone viewing this thread, then BOTH inboxes. The
+  // recipient needs it for the unread badge; the sender needs it too, or
+  // their own list keeps the stale preview and old position until a reload.
   const io = getIO();
   if (io) {
     io.to(`convo:${conversation._id}`).emit("message:new", message);
-    io.to(`user:${recipient}`).emit("inbox:update");
+    for (const participant of conversation.participants) {
+      io.to(`user:${participant}`).emit("inbox:update");
+    }
   }
   return message;
 };
@@ -72,23 +77,48 @@ export const startConversation = async (req, res, next) => {
 // GET /api/chat  → my inbox with unread counts
 export const listConversations = async (req, res, next) => {
   try {
-    const filter =
-      req.user.role === "mentor" ? { mentor: req.user._id } : { student: req.user._id };
-
-    const convos = await Conversation.find(filter)
+    const convos = await Conversation.find({ participants: req.user._id })
       .sort({ lastMessageAt: -1 })
-      .populate("student", "name")
-      .populate("mentor", "name mentorProfile.university");
+      .populate(
+        "participants",
+        "name role mentorProfile.university studentProfile.abroad.university"
+      );
 
     const withUnread = await Promise.all(
-      convos.map(async (c) => ({
-        id: c._id,
-        student: c.student,
-        mentor: c.mentor,
-        lastMessageAt: c.lastMessageAt,
-        lastMessageText: c.lastMessageText,
-        unread: await Message.countDocuments({ conversation: c._id, unreadFor: req.user._id }),
-      }))
+      convos.map(async (c) => {
+        // The inbox shows "who am I talking to", not student/mentor slots.
+        const other = c.participants.find(
+          (p) => String(p._id) !== String(req.user._id)
+        );
+        return {
+          id: c._id,
+          other: other
+            ? {
+                id: other._id,
+                name: other.name,
+                role: other.role,
+                // Not everyone is a mentor: students carry their university
+                // in the abroad profile instead.
+                university:
+                  other.mentorProfile?.university ??
+                  other.studentProfile?.abroad?.university ??
+                  null,
+              }
+            : null,
+          lastMessageAt: c.lastMessageAt,
+          lastMessageText: c.lastMessageText,
+          unread: await Message.countDocuments({ conversation: c._id, unreadFor: req.user._id }),
+        };
+      })
+    );
+
+    // Inbox order: threads that need a reply first, then the most recent.
+    // The Mongo sort above already ordered by recency; this lifts unread
+    // threads above read ones while keeping recency inside each group.
+    withUnread.sort(
+      (a, b) =>
+        Number(b.unread > 0) - Number(a.unread > 0) ||
+        new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
     );
 
     res.json({ success: true, conversations: withUnread });
@@ -102,8 +132,7 @@ export const getMessages = async (req, res, next) => {
   try {
     const convo = await Conversation.findById(req.params.id);
     const mine =
-      convo &&
-      [String(convo.student), String(convo.mentor)].includes(String(req.user._id));
+      convo && convo.participants.map(String).includes(String(req.user._id));
     if (!mine) {
       return res.status(404).json({ success: false, message: "Conversation not found." });
     }
@@ -112,11 +141,13 @@ export const getMessages = async (req, res, next) => {
       .sort({ createdAt: 1 })
       .limit(200);
 
-    // Opening the thread = reading it.
+    // Opening the thread = reading it. Then tell MY other tabs/navbar to
+    // refresh the badge — without this the red count sticks after reading.
     await Message.updateMany(
       { conversation: convo._id, unreadFor: req.user._id },
       { unreadFor: null }
     );
+    getIO()?.to(`user:${req.user._id}`).emit("inbox:update");
 
     res.json({ success: true, messages });
   } catch (err) {

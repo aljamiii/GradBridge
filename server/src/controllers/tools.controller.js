@@ -2,6 +2,7 @@
 // NO AI here on purpose — the spec requires a weighted-sum formula and
 // pure arithmetic, which are transparent and explainable to the student.
 import destinations from "../data/destinations.js";
+import emailTemplates from "../data/emailTemplates.js";
 import { getRatesUSD } from "../services/exchangeRate.js";
 
 // ---------- Life Compatibility Score ----------
@@ -196,5 +197,71 @@ export const computePRPoints = (req, res) => {
     input,
     pathways: [canadaCRS(input), australiaPoints(input)],
     note: "Simplified estimates of the official points systems — always confirm on the official immigration sites.",
+  });
+};
+
+// ---------- Supervisor Email Composer (Module 3) ----------
+// Spec: a RULE-BASED mail merge — pick a template, fill placeholders from the
+// form plus the student's saved profile, return subject + body. No AI: the
+// student must be able to read, edit and defend every sentence they send.
+
+// GET /api/tools/email-templates — list templates for the picker.
+export const listEmailTemplates = (req, res) => {
+  res.json({
+    success: true,
+    templates: emailTemplates.map(({ id, name, description }) => ({ id, name, description })),
+  });
+};
+
+// POST /api/tools/compose-email
+// body: { templateId, professorName, university, paperTitle, program, degreeLevel, intake }
+export const composeEmail = (req, res) => {
+  const template = emailTemplates.find((t) => t.id === req.body.templateId);
+  if (!template) {
+    return res.status(400).json({ success: false, message: "Pick an email template." });
+  }
+
+  const p = req.user.studentProfile ?? {};
+
+  // One English-test sentence, built from the profile so the student never
+  // claims a score they haven't got.
+  const englishLine =
+    p.englishTest?.name && p.englishTest.name !== "None" && p.englishTest.score != null
+      ? `I have taken the ${p.englishTest.name} and scored ${p.englishTest.score}.`
+      : "I am currently preparing for my English proficiency test and can share the score as soon as it is available.";
+
+  const values = {
+    studentName: req.user.name,
+    email: req.user.email,
+    degree: p.degree || "Bachelor's degree",
+    cgpa: p.cgpa != null ? String(p.cgpa) : "—",
+    researchInterest: p.researchInterest || "my research area",
+    englishLine,
+    professorName: (req.body.professorName || "").trim() || "{{professorName}}",
+    university: (req.body.university || "").trim() || p.preferredCountry || "{{university}}",
+    paperTitle: (req.body.paperTitle || "").trim() || "{{paperTitle}}",
+    program: (req.body.program || "").trim() || p.researchInterest || "{{program}}",
+    degreeLevel: ["Masters", "PhD"].includes(req.body.degreeLevel) ? req.body.degreeLevel : "Masters",
+    intake: (req.body.intake || "").trim() || "the upcoming",
+  };
+
+  // THE mail merge: replace every {{key}} we have a value for.
+  const fill = (text) =>
+    text.replace(/\{\{(\w+)\}\}/g, (match, key) => values[key] ?? match);
+
+  const subject = fill(template.subject);
+  const body = fill(template.body);
+
+  // Anything still in {{braces}} is a blank the student must fill in.
+  const missing = [...new Set(body.concat(subject).match(/\{\{(\w+)\}\}/g) ?? [])]
+    .map((m) => m.replace(/[{}]/g, ""));
+
+  res.json({
+    success: true,
+    template: { id: template.id, name: template.name },
+    subject,
+    body,
+    missing,
+    mailto: `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
   });
 };

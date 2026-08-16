@@ -1,0 +1,292 @@
+# Member 3 — K. M. Muhaiminul Islam
+
+Features: **Bangladeshi Abroad Network Map** (Module 1) · **Real-Time Mentor &
+Ambassador Chat with Alerts** (Module 2) · **Rule-Based Mentor Matcher &
+Booking** + **Community Forum & Insights Dashboard** (Module 3).
+External APIs: OpenStreetMap Nominatim (geocoding) + OSM tiles.
+
+---
+
+## 1. Bangladeshi Abroad Network Map (Module 1)
+
+**What it does:** students already abroad opt in from their profile; they're
+geocoded and plotted on an interactive world map, filterable by country,
+degree, and subject.
+
+**Files:** `models/User.js` (`studentProfile.abroad` + 2dsphere index) ·
+`services/geocode.js` (Nominatim) · `controllers/user.controller.js`
+(`updateProfile` geocoding hook + `getNetworkMap` + `getNearbyStudents`) ·
+`client/src/pages/NetworkMap.jsx` (Leaflet) · `scripts/seedAbroadStudents.js` ·
+`scripts/backfillGeoPoints.js`
+
+**Flow:**
+1. Profile page has an opt-in checkbox + city/country/university/degree/subject
+   + **"I can help newcomers with…"** toggle chips (visa · housing · funding ·
+   part-time jobs · admissions · settling in). Fixed vocabulary (a model
+   `enum`, mirrored as a constant on both pages) — free text couldn't be
+   filtered reliably.
+2. On save, IF the location changed (or was never geocoded), the server calls
+   **Nominatim** (`geocodePlace`): try "university, city, country" first, fall
+   back to "city, country". Results cached per query; identified User-Agent;
+   fail-soft (profile still saves; the pin just waits).
+3. `GET /api/users/network-map` returns only `abroad.optIn: true` users with
+   coordinates — privacy by default.
+4. Leaflet renders OSM tiles + a `divIcon` pin per student; filters run
+   client-side over the fetched pins; `fitBounds` re-zooms to the filtered set.
+   A **sidebar of profile cards** mirrors the filtered pins (same `visible`
+   array, same order) — clicking a card `flyTo`s that student's pin and opens
+   its popup. Cards and popups show **~local time** (longitude ÷ 15 ≈ UTC
+   offset — labeled "~" because real zones bend around borders/DST; good
+   enough to know whether it's 3 AM there before you say hi).
+5. **Cross-link:** each pin popup has "🧭 Explore this area →" deep-linking to
+   `/survival-guide?q=<university, city, country>` (popup content is a DOM
+   element, not an HTML string, so the link navigates inside the SPA). The map
+   also reads `?country=` to open pre-filtered — that's where the Survival
+   Guide's "see them on the Network Map" chip lands. Two map features, two
+   halves of one journey: find your people, then learn their neighbourhood.
+6. **Geospatial endpoint (mine):** `GET /api/users/network-map/nearby?lat=&lng=`
+   powers the Survival Guide's green map pins and summary line.
+7. **Radius search:** clicking anywhere on the map — or typing a city into
+   the ✈️ fly-to box (geocoded server-side via the cached Nominatim service)
+   — draws a 100 km circle and asks that same endpoint who's inside it; the
+   sidebar flips to "Near this spot" with per-student distance badges. One
+   `$geoNear` endpoint, two consumers (Survival Guide cross-link + map probe).
+8. **City clustering (hand-rolled, no plugin):** pins are grouped by
+   `city|country`; a multi-student city renders one green count badge.
+   Clicking it flies in and **spider-fans** the members around the city
+   centre (offsets computed with `project`/`unproject` at the *target* zoom,
+   so the fan is laid out for where the camera lands), with dashed connector
+   legs and a × collapse button. ~40 lines, every one explainable — that's
+   why no `leaflet.markercluster`.
+9. **Country stat chips (my third aggregation):**
+   `GET /api/users/network-map/stats` — `$match` opted-in →
+   `$group` by country with `$sum` and `$addToSet` cities → `$size` →
+   `$sort`. Rendered as clickable flag chips above the map; clicking toggles
+   the country filter (map + sidebar re-zoom via the shared `visible` state).
+10. **"🎨 Colour by my fit" (Map × Compatibility Score):** a toggle that POSTs
+    to Module 3's `/api/tools/compatibility` with weights **derived from my
+    saved profile** (budgetUSD → budget weight, weatherTolerance → weather,
+    communityPriority → community, safety fixed at 7) — so the map asks no
+    extra questions. Pins and cluster badges are tinted green ≥70 / amber
+    50-69 / red <50 with a legend, and the score is spelled out in the pin
+    **popup** ("Vancouver scores 61/100 for you — strong on safety, weak on
+    budget"). Zero backend changes: it composes another member's endpoint.
+    The point: **the map stops looking the same for everyone** — it becomes
+    *your* map.
+    *Design note worth telling:* the score first sat on the sidebar profile
+    cards, where it read as a rating **of the student** ("weak on budget"
+    under someone's name) and repeated once per person in the same city. The
+    fit describes a **place**, so it moved to where the subject is a place —
+    the pin colour and the popup — and person cards went back to describing
+    only the person.
+11. **Live presence (Map × Chat):** `socket.js` keeps a `userId → connection
+   count` Map (count, not boolean — a user can have several tabs). First
+   connection broadcasts `presence:update {online:true}`, last disconnect
+   broadcasts offline; late joiners fetch the list via `presence:get` (ack).
+   The map paints a pulsing sky-blue dot on online pins, cluster badges, and
+   sidebar avatars, and re-syncs on socket reconnect. Reuses my chat socket —
+   no new connection, no polling. `abroad.lat/lng` is mirrored into a GeoJSON `Point`
+   (`location`, **[lng, lat] order** — the classic gotcha) with a **2dsphere
+   index**; a `$geoNear` aggregation (must be the *first* pipeline stage)
+   returns opted-in students within the radius, already distance-sorted and
+   excluding the caller. Same philosophy as my forum insights: **make the
+   database do the work** — no JS haversine loop over every pin.
+
+**Why:**
+- Google Maps now requires a credit card; Leaflet + OSM + Nominatim delivers
+  the same feature at $0 — an engineering trade-off, name it proudly.
+- Geocoding server-side on SAVE (not on every map view): one geocode per
+  profile change instead of N per page load; respects Nominatim's ~1 req/s policy.
+- `divIcon` (a styled div) instead of Leaflet's default marker images — those
+  break under bundlers like Vite.
+
+**Viva Q&A:**
+- *How do you protect privacy?* Only opted-in students are ever queried
+  (`optIn: true` is in the DB filter, not client-side hiding).
+- *What if Nominatim can't find the university?* Fallback query city+country;
+  if that fails too → coords null → not plotted, profile intact (fail-soft).
+- *Why filter client-side?* Dozens of pins — refetching per filter would be
+  wasteful; the data is already in memory.
+- *What does "can help with" change?* It turns a directory into a help
+  marketplace: the map answers "**who near Toronto can help with housing?**",
+  which is the question a student actually has. It's also why "Say hi" has a
+  reason attached — you message someone who already offered that help.
+- *How does the "students near this campus" chip know who's nearby?* It calls
+  MY endpoint: `$geoNear` on the 2dsphere index over `abroad.location`. The
+  DB computes great-circle distances from the index and returns sorted
+  results — the Survival Guide page just renders the count.
+- *Why store both lat/lng and a GeoJSON Point?* lat/lng feeds Leaflet
+  directly; the Point feeds the index. They're kept in sync in one place
+  (`updateProfile`), and `backfillGeoPoints.js` migrated pre-existing pins
+  with a single pipeline-update (`updateMany` + aggregation `$set`).
+
+**Practice modifications:**
+- Easy: change the pin color / make PhD pins a different color.
+- Medium: add a "university" text filter beside the existing three.
+- Hard: re-layout the spider-fan on every zoom change (like
+  leaflet.markercluster does) instead of fixing it at expand time.
+
+---
+
+## 2. Real-Time Mentor & Ambassador Chat with Alerts (Module 2)
+
+**What it does:** real-time chat with instant delivery, unread badges in the
+navbar, and booking events appearing in the thread as system messages.
+Student↔mentor (bookings) AND student↔student — the Network Map's sidebar
+cards have a "👋 Say hi" button that opens a peer thread.
+
+**Files:** `server/src/socket.js` · `models/Conversation.js` +
+`models/Message.js` · `controllers/chat.controller.js` ·
+`routes/chat.routes.js` · `client/src/lib/socket.js` ·
+`client/src/pages/Chat.jsx` · `vite.config.js` (`/socket.io` ws proxy)
+
+**Architecture — quote this line: REST for state, sockets for events.**
+- REST: inbox (`GET /api/chat`), history (`GET /api/chat/:id/messages`, which
+  also marks messages read), unread count.
+- Socket.io: `io.use()` middleware verifies the JWT from the handshake — no
+  token, no connection. Every user joins a personal room `user:<id>`; opening a
+  thread joins `convo:<id>` (after a membership check).
+- Sending: client emits `message:send` → server validates membership → shared
+  `deliverMessage()` saves the Message, updates the conversation preview, emits
+  `message:new` to the thread room and `inbox:update` to the recipient's
+  personal room (that's what refreshes the navbar badge anywhere in the app).
+- **System messages**: bookings call `sendSystemMessage()` — the in-app alert
+  layer ("📅 Booking request…", "✅ confirmed") without an email dependency.
+
+**Data model decisions:**
+- **Peer-to-peer (upgraded):** a Conversation is `participants: [two users]` —
+  originally `student`/`mentor` fields, generalized so the Network Map's
+  "👋 Say hi" can open student↔student threads. Uniqueness of the *unordered*
+  pair is enforced by a derived sorted `pairKey` ("idA:idB") with a unique
+  index — a multikey index on the array can't express that. Find-or-create is
+  an atomic `findOneAndUpdate` upsert on `pairKey`, so two simultaneous
+  "Say hi" clicks can't create two threads (the old find-then-create had that
+  race). Legacy threads were migrated by `scripts/migratePeerChat.js`, which
+  also drops the old `(student, mentor)` unique index — left in place it
+  would reject every new conversation as a duplicate `(null, null)`.
+- The inbox API returns `other` (who you're talking to) instead of
+  student/mentor slots — the UI no longer cares about roles.
+- `Message.unreadFor` holds the user id who hasn't read it; marking read =
+  setting it null; unread count = `countDocuments({unreadFor: me})`. Simple
+  because chats are exactly two people.
+
+**The bug I fixed (tell this story — it shows ownership):** my own sent
+messages appeared twice: once from the send-acknowledgment and once from the
+room broadcast (I'm in the room too). Refresh showed one — the DB was right,
+the UI state was wrong. Fix: both delivery paths check `_id` before appending
+(dedupe by id — standard practice in real-time UIs where one event can arrive
+via multiple channels).
+
+**Viva Q&A:**
+- *Why do you need Socket.io at all — why not poll?* Polling wastes requests
+  and adds latency; WebSockets push instantly over one connection.
+- *How is the socket authenticated?* JWT in `socket.handshake.auth.token`,
+  verified server-side in `io.use` before any events flow.
+- *Can I join a conversation I'm not part of?* No — `convo:join` loads the
+  conversation and checks I'm the student or the mentor before `socket.join`.
+
+**Read receipts (upgraded — was the "hard" practice mod):** reads happen in
+two places, and BOTH must refresh the navbar badge: ① opening a thread (REST
+history load marks read, then the server emits `inbox:update` to *my own*
+personal room — without that the red badge stuck after reading); ② a live
+message arriving while the thread is open (client emits `convo:read`, the
+server verifies membership, clears `unreadFor`, and pings my room). The inbox
+and thread header also show a role tag (Mentor/Student) + university, since
+peer chat means not everyone is a mentor.
+
+**Practice modifications:**
+- Easy: add a "typing…" event (emit on input, show under the header).
+- Medium: add message timestamps grouped by day.
+- Hard: read receipts for the SENDER ("seen ✓✓") — you'd need a per-message
+  readAt and a socket event back to the sender's room.
+
+---
+
+## 3. Rule-Based Mentor Matcher & Session Booking (Module 3)
+
+**What it does:** approved mentors ranked by tag overlap with the student's
+profile; the student books a time slot; a conflict check prevents double
+booking; the mentor confirms or declines.
+
+**Files:** `controllers/mentor.controller.js` ·
+`controllers/booking.controller.js` · `models/Booking.js` ·
+`client/src/pages/Mentors.jsx` + `Bookings.jsx`
+
+**Matching (NO AI — spec requires rule-based tag overlap):** tokenize the
+student's `preferredCountry + researchInterest + degree` and each mentor's
+`qualification + university + expertise[]` (lowercase, ≥3 letters, stopwords
+removed); `matchScore` = count of shared distinct tokens; response includes
+`matchedOn` so the UI can show WHY ("matched on: canada") — explainable ranking.
+
+**Conflict check (the interval-overlap rule — write it on the whiteboard):**
+```
+conflict ⇔ existing.start < newEnd  AND  newStart < existing.end
+```
+checked against the mentor's pending+confirmed bookings only (declined/
+cancelled don't block). Also rejected: past datetimes, unapproved mentors.
+
+**Status rules:** mentors may set confirmed/declined, students only cancelled —
+enforced by role in the controller, with ownership in the query filter. Every
+transition posts a system message into the chat thread.
+
+**Viva Q&A:**
+- *Why not exact-slot matching for conflicts?* A 10:00–10:30 booking and a
+  10:15 request overlap without being equal — interval math catches partial
+  overlaps.
+- *Why is the score explainable?* `matchedOn` lists the overlapping tags —
+  a ranked list a human can audit, exactly what "rule-based" means.
+- *What stops booking a pending (unapproved) mentor?* The mentor lookup itself
+  filters `verificationStatus: "approved"`.
+
+**Practice modifications:**
+- Easy: add 45 to the duration enum (model + form select).
+- Medium: give expertise-tag matches double weight vs university-word matches.
+- Hard: let mentors define weekly availability windows and validate against them.
+
+---
+
+## 4. Community Forum & Insights Dashboard (Module 3)
+
+**What it does:** a real forum (posts, tags, one-per-user upvotes, 1–5 star
+ratings, replies) plus an analytics dashboard computed with **MongoDB
+aggregation pipelines** — top concerns, avg rating per tag, discussion by city,
+seasonal posting trend.
+
+**Files:** `models/Post.js` · `controllers/forum.controller.js` ·
+`controllers/insights.controller.js` · `client/src/pages/Forum.jsx` +
+`ForumInsights.jsx` · `scripts/seedForum.js`
+
+**Model decisions (be ready to defend each):**
+- `upvotes: [userId]` — an array of voter ids, so one user = one vote and a
+  second click *toggles* it off. Count = array length.
+- `ratings: [{user, stars}]` — one rating per user, updatable in place.
+- **Comments embedded** in the post (not a separate collection): a thread is
+  always read together with its post — one query, no join. `authorName` is
+  denormalized to skip populate on every list.
+
+**The aggregations (`insights.controller.js`) — the spec explicitly says "DB
+aggregation", so point at the pipelines, not JS loops:**
+- Top concerns: `$unwind: "$tags"` → `$group` count + summed `$size` of
+  upvotes/comments → `$sort` → `$limit`.
+- Avg rating per tag: double `$unwind` (tags, ratings) → `$group` with `$avg`
+  → require ≥2 ratings (one vote isn't a signal).
+- Seasonal trend: `$group` by `{$year, $month}` of `createdAt` → posts/month.
+Know what `$unwind` does: one document per array element, so a post tagged
+`[visa, canada]` counts once for each tag.
+
+**Viva Q&A:**
+- *Why aggregation in the DB instead of fetching all posts and counting in JS?*
+  The DB scans indexes and returns 8 rows instead of shipping every post over
+  the network; it scales and it's what the spec requires.
+- *How is double-voting prevented?* The vote array stores WHO voted; the
+  controller looks for my id and toggles. State lives in data, not the UI.
+- *Where do the charts come from?* Plain divs with computed widths — a
+  deliberate zero-dependency choice; single validated accent color, values
+  labeled, hover tooltips.
+
+**Practice modifications:**
+- Easy: raise the tag limit from 5 to 8 (model validator + note in the form).
+- Medium: add a "most upvoted post per city" aggregation (`$sort` + `$first`
+  inside `$group`) and a card for it.
+- Hard: report/flag button on posts + admin review list (mirror the mentor
+  verification pattern).
