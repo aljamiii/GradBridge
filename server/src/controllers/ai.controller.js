@@ -179,9 +179,37 @@ export const analyzeEligibility = async (req, res, next) => {
         ? `${p.englishTest.name} ${p.englishTest.score ?? "(score not given)"}`
         : "No English test taken yet";
 
+    const research = p.researchExperience ?? {};
+    console.log("RESEARCH PROFILE:", research);
+    console.log("DEGREE LEVEL:", degreeLevel);
+
+    const researchStatus = research.hasExperience
+      ? [
+          `Yes`,
+          `Type: ${research.experienceType || "not specified"}`,
+          `Duration: ${research.months || 0} months`,
+          `Publications: ${research.publications || 0}`,
+          `Description: ${research.description || "not provided"}`,
+        ].join("; ")
+      : "No research experience reported";
+
     // Cache key includes profile values: if the student updates CGPA or IELTS,
     // they get a fresh analysis instead of a stale cached one.
-    const key = `${req.user.id}|${university}|${program}|${degreeLevel}|${p.cgpa}|${english}`.toLowerCase();
+    const key = [
+      req.user.id,
+      university,
+      program,
+      degreeLevel,
+      p.degree,
+      p.cgpa,
+      english,
+      p.researchInterest || "",
+      research.hasExperience ?? false,
+      research.months ?? 0,
+      research.experienceType || "None",
+      research.description || "",
+      research.publications ?? 0,
+    ].join("|").toLowerCase();
     const hit = eligibilityCache.get(key);
     if (hit && hit.expires > Date.now()) {
       return res.json({ success: true, cached: true, ...hit.data });
@@ -196,23 +224,76 @@ Student profile:
 - CGPA: ${p.cgpa} out of 4.0
 - English test: ${english}
 - Research interest: ${p.researchInterest || "not specified"}
+- Research experience: ${researchStatus}
 
 Use the TYPICAL published admission requirements for this university and program
 (minimum CGPA/GPA equivalent, English test minimums, research/publication
 expectations${degreeLevel === "PhD" ? ", supervisor fit and research proposal" : ""}).
+
 
 Rules:
 - Be honest, not encouraging: if the profile falls short, say "not-eligible" and explain.
 - "borderline" means meets minimums but weak against the typical admitted cohort.
 - Every gap needs ONE concrete, actionable step (e.g., "Retake IELTS aiming for 7.0 — offered twice monthly in Dhaka").
 - If the English test is missing, that is always a gap (severity critical for most programs).
-- List genuine strengths too — what should this student emphasize in their application?`;
+- List genuine strengths too — what should this student emphasize in their application?
+
+Research-experience rules:
+- Evaluate research experience independently from research interest.
+- Research interest alone is NOT research experience.
+- For PhD applications, no research experience must normally be reported as a critical gap.
+- For research-intensive Master's programs, no research experience should normally be moderate.
+- For taught/coursework Master's programs, research experience may be minor or not required.
+- Publications are valuable but must not automatically be treated as mandatory unless typically required.
+- Consider the duration, experience type, description, and publications together.
+- Do not invent research achievements that are absent from the profile.
+- If research experience is a gap, provide exactly one realistic action the student can complete.`;
 
     const analysis = await generateJSON(prompt, eligibilitySchema);
+    // Ensure Gemini always returns an array.
+    if (!Array.isArray(analysis.gaps)) {
+      analysis.gaps = [];
+    }
 
+    if (!Array.isArray(analysis.strengths)) {
+      analysis.strengths = [];
+    }
+
+    const hasResearchGap = analysis.gaps.some((gap) =>
+      String(gap.area || "").toLowerCase().includes("research")
+    );
+    if (
+      degreeLevel === "PhD" &&
+      !research.hasExperience &&
+      !hasResearchGap
+    ) {
+      analysis.gaps.unshift({
+        area: "Research experience",
+        requirement:
+          "PhD programs typically expect evidence of previous research, such as a thesis, research project, or research-assistant work.",
+        yourStatus: "No research experience reported.",
+        severity: "critical",
+        advice:
+          "Complete a supervised research project or undergraduate thesis and document your methods and findings before applying.",
+      });
+
+      if (analysis.verdict === "eligible") {
+        analysis.verdict = "borderline";
+      }
+    }
+    console.log("FINAL ANALYSIS:", analysis);
+    console.log("FINAL GAPS:", analysis.gaps);
     const data = {
       input: { university, program, degreeLevel },
-      profileUsed: { degree: p.degree, cgpa: p.cgpa, english },
+      profileUsed: {
+        degree: p.degree,
+        cgpa: p.cgpa,
+        english,
+        researchInterest: p.researchInterest || "Not specified",
+        researchExperience: researchStatus,
+      },
+
+      // Include Gemini's verdict, summary, gaps and strengths
       ...analysis,
     };
 
@@ -261,6 +342,31 @@ const loadChunks = async () => {
 const TOP_K = 4;             // how many chunks to hand to Gemini
 const MIN_SIMILARITY = 0.45; // raw cosine — below this, a chunk is probably irrelevant
 const VECTOR_INDEX = "knowledge_vector_index"; // created by scripts/createVectorIndex.js
+
+// Detect whether the student's question explicitly mentions
+// one of the destinations covered by our knowledge base.
+const findMentionedDestination = async (text) => {
+  const chunks = await loadChunks();
+
+  const destinations = [
+    ...new Map(
+      chunks.map((c) => [
+        `${c.city}|${c.country}`,
+        { city: c.city, country: c.country },
+      ])
+    ).values(),
+  ];
+
+  const lower = text.toLowerCase();
+
+  return (
+    destinations.find(
+      (d) =>
+        lower.includes(d.city.toLowerCase()) ||
+        lower.includes(d.country.toLowerCase())
+    ) || null
+  );
+};
 
 // Retrieval has two paths:
 //   PRIMARY  — Atlas Vector Search: the DB's own vector index finds the nearest
@@ -315,15 +421,86 @@ const retrieveChunks = async (qVector) => {
 export const askDestinationAdvisor = async (req, res, next) => {
   try {
     const question = (req.body.question || "").trim();
+
+    const history = Array.isArray(req.body.history)  // add history handling (follow up questions), like- is toronto safe? how safe is it? (here, "it" will mean "toronto")
+      ? req.body.history.slice(-3)  
+      : [];
+
     if (question.length < 5) {
       return res.status(400).json({ success: false, message: "Please ask a full question." });
     }
 
     // 1. EMBED the question
-    const qVector = await embedText(question);
+    const historyText = history
+      .map(
+        (item) =>
+          `Previous question: ${item.question || ""}\nPrevious answer: ${item.answer || ""}`
+      )
+      .join("\n\n");
+
+    const retrievalQuery = historyText
+      ? `${historyText}\n\nCurrent question: ${question}`
+      : question;
+    
+    // First give priority to a destination explicitly mentioned
+    // in the CURRENT question.
+    let mentionedDestination =
+      await findMentionedDestination(question);
+
+    // If no destination is mentioned, look through conversation
+    // history from newest → oldest.  
+    if (!mentionedDestination && history.length > 0) {
+      // Search history from newest → oldest so follow-up questions
+      // refer to the most recently discussed destination.
+      for (let i = history.length - 1; i >= 0; i--) {
+        const recentContext =
+          `${history[i].question || ""} ${history[i].answer || ""}`;
+
+        mentionedDestination =
+          await findMentionedDestination(recentContext);
+
+        if (mentionedDestination) {
+          break;
+        }
+      }
+    }
+
+    const qVector = await embedText(retrievalQuery);
 
     // 2. RETRIEVE top-K most similar chunks (vector index, or in-memory fallback)
-    const { scored, retrieval } = await retrieveChunks(qVector);
+    const retrievalResult = await retrieveChunks(qVector);
+
+    let scored = retrievalResult.scored;
+    const retrieval = retrievalResult.retrieval;
+
+    // KEEP RESULTS IN THE CORRECT CITY
+    if (mentionedDestination) {
+      scored = scored.filter(
+        (c) =>
+          c.city.toLowerCase() ===
+          mentionedDestination.city.toLowerCase()
+      );
+
+      // If Atlas top results missed the intended city,
+      // do a focused cosine search over that city's chunks.
+      if (scored.length === 0) {
+        const chunks = await loadChunks();
+
+        scored = chunks
+          .filter(
+            (c) =>
+              c.city.toLowerCase() ===
+              mentionedDestination.city.toLowerCase()
+          )
+          .map((c) => ({
+            ...c,
+            score: cosine(qVector, c.embedding),
+          }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, TOP_K)
+          .filter((c) => c.score >= MIN_SIMILARITY);
+      }
+    }
 
     if (scored.length === 0 && (await KnowledgeChunk.estimatedDocumentCount()) === 0) {
       return res.status(503).json({
@@ -333,7 +510,14 @@ export const askDestinationAdvisor = async (req, res, next) => {
     }
 
     // 3. AUGMENT: live weather for the city the best chunks are about
-    const topCity = scored[0] ? { city: scored[0].city, country: scored[0].country } : null;
+    const topCity = mentionedDestination
+      ? mentionedDestination
+      : scored[0]
+        ? {
+            city: scored[0].city,
+            country: scored[0].country,
+          }
+        : null;
     const weather = topCity ? await getWeather(topCity.city) : null;
 
     const context = scored
@@ -344,18 +528,36 @@ export const askDestinationAdvisor = async (req, res, next) => {
       ? `\n\nLIVE WEATHER RIGHT NOW in ${weather.city}: ${weather.tempC}°C (feels like ${weather.feelsLikeC}°C), ${weather.description}, humidity ${weather.humidity}%.`
       : "";
 
+    const conversationContext = history.length
+      ? history
+          .map(
+            (item) =>
+              `Student: ${item.question || ""}\nAdvisor: ${item.answer || ""}`
+          )
+          .join("\n\n")
+      : "(no previous conversation)";
+
     const prompt = `You are GradBridge's destination advisor for Bangladeshi students planning to study abroad.
 
-Answer the student's question using ONLY the context below. Rules:
-- If the context doesn't contain the answer, say honestly that your guide doesn't cover it yet and suggest asking a country ambassador — DO NOT invent facts.
+Answer the student's current question using ONLY the retrieved context below.
+
+Rules:
+- The conversation history may help you understand references such as "it", "there", "that place", "what about rent?", or other follow-up wording.
+- Conversation history is ONLY for understanding what the student means.
+- Factual claims must still come from the retrieved context or live weather.
+- If the retrieved context doesn't contain the answer, say honestly that your guide doesn't cover it yet and suggest asking a country ambassador — DO NOT invent facts.
 - Be specific and practical; write 1 short paragraph or a few bullet points, not an essay.
 - If live weather is provided and relevant, weave it in naturally.
 - Answer in the same language the student asked in (English or Bangla).
 
-CONTEXT:
+RECENT CONVERSATION:
+${conversationContext}
+
+RETRIEVED CONTEXT:
 ${context || "(no relevant guide sections found)"}${weatherLine}
 
-STUDENT'S QUESTION: ${question}`;
+CURRENT STUDENT QUESTION:
+${question}`;
 
     // 4. GENERATE
     const answer = await generateText(prompt);

@@ -34,6 +34,33 @@ const userSchema = new mongoose.Schema(
         score: Number,
       },
       researchInterest: String,
+      researchExperience: {
+        hasExperience: { type: Boolean, default: false },
+        months: { type: Number, min: 0, default: 0 },
+        experienceType: {
+          type: String,
+          enum: [
+            "None",
+            "Undergraduate thesis",
+            "Research project",
+            "Research assistant",
+            "Laboratory research",
+            "Industry research",
+            "Other",
+          ],
+          default: "None",
+        },
+        description: {
+          type: String,
+          trim: true,
+          maxlength: 1000,
+        },
+        publications: {
+          type: Number,
+          min: 0,
+          default: 0,
+        },
+      },
       preferredCountry: String,
       budgetUSD: Number, // yearly budget in USD
 

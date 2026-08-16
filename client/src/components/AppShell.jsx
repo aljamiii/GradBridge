@@ -94,6 +94,21 @@ const NAV = {
         { to: "/admin/scholarships", icon: "gift", label: "Scholarship review" },
       ],
     },
+    {
+      label: "Scholarship Aggregator",
+      items: [
+        {
+          to: "/admin/aggregator",
+          icon: "chart",
+          label: "Aggregator Dashboard",
+        },
+        {
+          to: "/admin/aggregator/duplicates",
+          icon: "puzzle",
+          label: "Resolve Duplicates",
+        },
+      ],
+    },
   ],
 };
 

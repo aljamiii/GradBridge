@@ -22,12 +22,18 @@ function Field({ label, children }) {
 function StudentForm({ user, onSave, saving }) {
   const p = user.studentProfile ?? {};
   const a = p.abroad ?? {};
+  const r = p.researchExperience ?? {};
   const [form, setForm] = useState({
     degree: p.degree ?? "",
     cgpa: p.cgpa ?? "",
     englishTestName: p.englishTest?.name ?? "None",
     englishTestScore: p.englishTest?.score ?? "",
     researchInterest: p.researchInterest ?? "",
+    researchHasExperience: r.hasExperience ?? false,
+    researchMonths: r.months ?? "",
+    researchExperienceType: r.experienceType ?? "None",
+    researchDescription: r.description ?? "",
+    researchPublications: r.publications ?? 0,
     preferredCountry: p.preferredCountry ?? "",
     budgetUSD: p.budgetUSD ?? "",
     weatherTolerance: p.weatherTolerance ?? "no-preference",
@@ -63,6 +69,21 @@ function StudentForm({ user, onSave, saving }) {
           score: form.englishTestScore === "" ? undefined : Number(form.englishTestScore),
         },
         researchInterest: form.researchInterest,
+        researchExperience: {
+          hasExperience: form.researchHasExperience,
+          months: form.researchHasExperience
+            ? Number(form.researchMonths || 0)
+            : 0,
+          experienceType: form.researchHasExperience
+            ? form.researchExperienceType
+            : "None",
+          description: form.researchHasExperience
+            ? form.researchDescription.trim()
+            : "",
+          publications: form.researchHasExperience
+            ? Number(form.researchPublications || 0)
+            : 0,
+        },
         preferredCountry: form.preferredCountry,
         budgetUSD: form.budgetUSD === "" ? undefined : Number(form.budgetUSD),
         weatherTolerance: form.weatherTolerance,
@@ -110,6 +131,96 @@ function StudentForm({ user, onSave, saving }) {
           <input name="researchInterest" value={form.researchInterest} onChange={set}
             placeholder="Machine Learning" className={inputClass} />
         </Field>
+        <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <label className="flex items-center gap-2 text-sm font-medium text-ink-700">
+            <input
+              type="checkbox"
+              checked={form.researchHasExperience}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  researchHasExperience: e.target.checked,
+                  researchExperienceType: e.target.checked
+                    ? form.researchExperienceType
+                    : "None",
+                })
+              }
+              className="h-4 w-4 rounded border-slate-300"
+            />
+
+            I have research experience
+          </label>
+
+          {form.researchHasExperience && (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Field label="Research experience type">
+                <select
+                  name="researchExperienceType"
+                  value={form.researchExperienceType}
+                  onChange={set}
+                  className={inputClass}
+                  required
+                >
+                  <option value="None">Select experience type</option>
+                  <option value="Undergraduate thesis">
+                    Undergraduate thesis
+                  </option>
+                  <option value="Research project">Research project</option>
+                  <option value="Research assistant">Research assistant</option>
+                  <option value="Laboratory research">
+                    Laboratory research
+                  </option>
+                  <option value="Industry research">Industry research</option>
+                  <option value="Other">Other</option>
+                </select>
+              </Field>
+
+              <Field label="Research duration (months)">
+                <input
+                  name="researchMonths"
+                  type="number"
+                  min="0"
+                  value={form.researchMonths}
+                  onChange={set}
+                  placeholder="6"
+                  className={inputClass}
+                  required
+                />
+              </Field>
+
+              <Field label="Number of publications">
+                <input
+                  name="researchPublications"
+                  type="number"
+                  min="0"
+                  value={form.researchPublications}
+                  onChange={set}
+                  placeholder="0"
+                  className={inputClass}
+                />
+              </Field>
+
+              <div className="sm:col-span-2">
+                <Field label="Research description">
+                  <textarea
+                    name="researchDescription"
+                    value={form.researchDescription}
+                    onChange={set}
+                    maxLength={1000}
+                    rows={4}
+                    placeholder="Describe your thesis, project, research methods, laboratory work, responsibilities, and outcomes."
+                    className={inputClass}
+                    required
+                  />
+                </Field>
+
+                <p className="mt-1 text-right text-xs text-slate-400">
+                  {form.researchDescription.length}/1000
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
         <Field label="Preferred country">
           <input name="preferredCountry" value={form.preferredCountry} onChange={set}
             placeholder="Canada" className={inputClass} />
