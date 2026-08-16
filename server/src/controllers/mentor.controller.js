@@ -35,6 +35,42 @@ const CRITERIA = [
   { key: "degree", label: "Degree background", weight: 1, kind: "tokens" },
 ];
 
+// The student's immediate need, chosen on the page rather than stored on the
+// profile — "who is like me" is a different question from "who can help me
+// with the thing I'm stuck on this week".
+//
+// The vocabulary is the SAME fixed list as the Network Map's `helpWith` chips
+// (User.studentProfile.abroad.helpWith). Mentors write their expertise as free
+// text, so each need carries the keywords that identify it — matching a need
+// to "Canada visas" or "Sweden residence permit" can't be done by string
+// equality. Weighted above every profile criterion because a stated need beats
+// an inferred similarity.
+const NEED_WEIGHT = 4;
+const NEEDS = [
+  { key: "visa", label: "Visa", keywords: ["visa", "visas", "immigration", "permit", "residence"] },
+  { key: "housing", label: "Housing", keywords: ["housing", "accommodation", "rent", "hostel"] },
+  {
+    key: "funding",
+    label: "Funding",
+    keywords: ["funding", "scholarship", "scholarships", "assistantship", "blocked", "financial"],
+  },
+  {
+    key: "part-time jobs",
+    label: "Part-time jobs",
+    keywords: ["part", "time", "jobs", "work", "careers", "career"],
+  },
+  {
+    key: "admissions",
+    label: "Admissions",
+    keywords: ["admissions", "admission", "sop", "statement", "application", "applications", "ielts"],
+  },
+  {
+    key: "settling in",
+    label: "Settling in",
+    keywords: ["settling", "settle", "culture", "community"],
+  },
+];
+
 // Only criteria the student has actually filled in count toward the maximum,
 // so an incomplete profile can't make every mentor look like a poor match.
 const criteriaFor = (p = {}) =>
@@ -50,7 +86,25 @@ export const listMentors = async (req, res, next) => {
     }).lean();
 
     const p = req.user.studentProfile ?? {};
-    const criteria = criteriaFor(p);
+
+    // ?need=visa — validated against the fixed vocabulary, so an unknown or
+    // hand-typed value is simply ignored rather than silently skewing ranks.
+    const need = NEEDS.find((n) => n.key === String(req.query.need ?? "").toLowerCase());
+
+    const criteria = [
+      ...(need
+        ? [
+            {
+              label: "Need help with",
+              value: need.label,
+              weight: NEED_WEIGHT,
+              kind: "need",
+              keywords: need.keywords,
+            },
+          ]
+        : []),
+      ...criteriaFor(p),
+    ];
     const maxScore = criteria.reduce((sum, c) => sum + c.weight, 0);
 
     const ranked = mentors
@@ -68,6 +122,13 @@ export const listMentors = async (req, res, next) => {
               mp.country && normalizeCountry(mp.country) === normalizeCountry(c.value)
                 ? [mp.country]
                 : [];
+          } else if (c.kind === "need") {
+            // Report the mentor's own tags that cover the need, not the
+            // internal keywords — "Canada visas" is what the student recognises.
+            const keywords = new Set(c.keywords);
+            hits = (mp.expertise ?? []).filter((tag) =>
+              meaningful(tag).some((t) => keywords.has(t))
+            );
           } else {
             hits = [...new Set(meaningful(c.value))].filter((t) => mentorTokens.has(t));
           }
@@ -107,6 +168,10 @@ export const listMentors = async (req, res, next) => {
       count: ranked.length,
       criteria: criteria.map((c) => ({ label: c.label, value: c.value, weight: c.weight })),
       maxScore, // the ceiling the rule can reach, not the best mentor's score
+      // The vocabulary lives on the server so the chips and the matcher can
+      // never drift apart.
+      needOptions: NEEDS.map((n) => ({ key: n.key, label: n.label })),
+      need: need?.key ?? null,
       mentors: ranked,
     });
   } catch (err) {

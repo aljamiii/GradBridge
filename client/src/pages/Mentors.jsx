@@ -245,14 +245,24 @@ export default function Mentors() {
   const [tag, setTag] = useState("all");
   const [sort, setSort] = useState("match");
   const [showRule, setShowRule] = useState(false);
+  const [need, setNeed] = useState("");
+  const [reranking, setReranking] = useState(false);
 
+  // Refetch when the stated need changes — the ranking is recomputed server
+  // side, so the rule stays in one place. Previous results stay on screen
+  // while it reloads, so switching needs re-ranks instead of flashing skeletons.
   useEffect(() => {
-    api("/api/mentors").then(setData).catch((err) => setError(err.message));
-  }, []);
+    setReranking(true);
+    api(`/api/mentors${need ? `?need=${encodeURIComponent(need)}` : ""}`)
+      .then(setData)
+      .catch((err) => setError(err.message))
+      .finally(() => setReranking(false));
+  }, [need]);
 
   const mentors = data?.mentors ?? null;
   const criteria = data?.criteria ?? [];
   const maxScore = data?.maxScore ?? 0;
+  const needOptions = data?.needOptions ?? [];
 
   // One bulk status call for every mentor on screen.
   useConnectionStatuses((mentors ?? []).map((m) => String(m.id)));
@@ -343,6 +353,49 @@ export default function Mentors() {
             </div>
           )}
 
+          {/* A stated need beats an inferred similarity, so it outweighs every
+              profile criterion — and it makes the list answer "who can help me
+              with this" rather than only "who is like me". */}
+          {needOptions.length > 0 && (
+            <div className="mt-3 border-t border-white/60 pt-3">
+              <p className="mb-2 text-xs font-medium text-ink-500">
+                What do you need help with right now?{" "}
+                <span className="font-normal text-ink-400">
+                  (optional — re-ranks the list)
+                </span>
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => setNeed("")}
+                  aria-pressed={need === ""}
+                  className={cx(
+                    "rounded-full px-3 py-1 text-xs transition-colors",
+                    need === ""
+                      ? "bg-brand-600 font-medium text-white"
+                      : "bg-white/70 text-ink-600 hover:bg-white"
+                  )}
+                >
+                  Anything
+                </button>
+                {needOptions.map((n) => (
+                  <button
+                    key={n.key}
+                    onClick={() => setNeed(n.key)}
+                    aria-pressed={need === n.key}
+                    className={cx(
+                      "rounded-full px-3 py-1 text-xs capitalize transition-colors",
+                      need === n.key
+                        ? "bg-brand-600 font-medium text-white"
+                        : "bg-white/70 text-ink-600 hover:bg-white"
+                    )}
+                  >
+                    {n.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {showRule && (
             <div className="mt-3 rounded-lg bg-white/50 p-3 text-xs leading-relaxed text-ink-500">
               <p>
@@ -359,7 +412,9 @@ export default function Mentors() {
                     </span>
                     {c.label === "Preferred country"
                       ? " — compared against the country the mentor actually studies in."
-                      : " — matched on shared words (lowercased, 3+ letters, common words like “university” dropped)."}
+                      : c.label === "Need help with"
+                        ? " — matched against the mentor’s expertise tags."
+                        : " — matched on shared words (lowercased, 3+ letters, common words like “university” dropped)."}
                   </li>
                 ))}
               </ul>
@@ -407,7 +462,7 @@ export default function Mentors() {
         </div>
       )}
 
-      <div className="mt-4 space-y-4">
+      <div className={cx("mt-4 space-y-4 transition-opacity", reranking && "opacity-60")}>
         {mentors === null ? (
           [...Array(3)].map((_, i) => <Skeleton key={i} className="h-52 w-full rounded-2xl" />)
         ) : mentors.length === 0 ? (
@@ -429,7 +484,8 @@ export default function Mentors() {
             <p className="text-xs text-ink-400">
               Showing {visible.length} of {mentors.length} verified mentor
               {mentors.length === 1 ? "" : "s"}
-              {sort === "match" && unmatched > 0 && ` · ${unmatched} with no profile overlap`}
+              {need && ` · ranked for “${needOptions.find((n) => n.key === need)?.label ?? need}”`}
+              {sort === "match" && unmatched > 0 && ` · ${unmatched} with no overlap`}
             </p>
             {visible.map((m, i) => (
               <MentorCard
