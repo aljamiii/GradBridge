@@ -13,6 +13,16 @@ const bookingSchema = new mongoose.Schema(
       enum: ["pending", "confirmed", "declined", "cancelled"],
       default: "pending", // mentor confirms or declines; student may cancel
     },
+    // The student's rating of a session that actually happened. Attached to
+    // the BOOKING rather than to the mentor on purpose: it means only someone
+    // who completed a session with them can rate, exactly once, and can revise
+    // it later — a mentor cannot collect ratings from people they never met.
+    rating: {
+      stars: { type: Number, min: 1, max: 5 },
+      comment: { type: String, trim: true, maxlength: 300 },
+      ratedAt: Date,
+    },
+
     // When the MENTOR first answered (confirmed or declined). Recorded
     // separately because `updatedAt` moves on any later edit — a session that
     // was confirmed quickly then cancelled weeks later would otherwise look

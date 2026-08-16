@@ -97,6 +97,49 @@ export const listBookings = async (req, res, next) => {
   }
 };
 
+// PUT /api/bookings/:id/rating   body: { stars, comment }
+// One rating per session, editable afterwards — same semantics as the forum's
+// post ratings, but gated on the session having actually taken place.
+export const rateBooking = async (req, res, next) => {
+  try {
+    const stars = Number(req.body.stars);
+    if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
+      return res.status(400).json({ success: false, message: "Rating must be 1-5 stars." });
+    }
+
+    // Ownership is in the query, not an if-check after the fact.
+    const booking = await Booking.findOne({ _id: req.params.id, student: req.user._id });
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found." });
+    }
+    if (booking.status !== "confirmed") {
+      return res.status(400).json({
+        success: false,
+        message: "Only a confirmed session can be rated.",
+      });
+    }
+    // `end` is the model's virtual (start + duration) — a session can only be
+    // judged once it is over.
+    if (booking.end > new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "You can rate this session once it has finished.",
+      });
+    }
+
+    booking.rating = {
+      stars,
+      comment: (req.body.comment ?? "").trim(),
+      ratedAt: new Date(),
+    };
+    await booking.save();
+
+    res.json({ success: true, booking });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // PUT /api/bookings/:id/status   body: { status }
 // Mentors: confirm/decline their bookings. Students: cancel their own.
 export const setBookingStatus = async (req, res, next) => {

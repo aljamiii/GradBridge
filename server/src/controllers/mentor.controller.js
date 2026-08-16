@@ -50,6 +50,9 @@ const trackRecordFor = async (mentorIds) => {
             ],
           },
         },
+        // Ratings ride along in the same $group — no second round trip.
+        ratingSum: { $sum: { $ifNull: ["$rating.stars", 0] } },
+        ratingCount: { $sum: { $cond: [{ $gt: ["$rating.stars", null] }, 1, 0] } },
       },
     },
   ]);
@@ -63,6 +66,10 @@ const trackRecordFor = async (mentorIds) => {
       // Rates need enough answers to mean anything.
       confirmRate: answered >= MIN_RESPONSES_FOR_RATE ? r.confirmed / answered : null,
       responsesCounted: answered,
+      // A single 5★ is not a reputation — show the count alongside so the
+      // reader can weigh it, same as the forum does.
+      avgRating: r.ratingCount ? Math.round((r.ratingSum / r.ratingCount) * 10) / 10 : null,
+      ratingCount: r.ratingCount,
       medianResponseHours:
         times.length >= MIN_RESPONSES_FOR_RATE
           ? Math.round((median(times) / 3600000) * 10) / 10
@@ -230,6 +237,8 @@ export const listMentors = async (req, res, next) => {
             confirmRate: null,
             responsesCounted: 0,
             medianResponseHours: null,
+            avgRating: null,
+            ratingCount: 0,
           },
         };
       })

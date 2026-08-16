@@ -41,9 +41,69 @@ const countdown = (d) => {
   return null;
 };
 
+/* Star control for a session that has already happened. Editable after the
+   fact — a first impression the next day is often not the lasting one. */
+function RateSession({ booking, onRate }) {
+  const [hover, setHover] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const current = booking.rating?.stars ?? 0;
+
+  const submit = async (stars) => {
+    setBusy(true);
+    setError("");
+    try {
+      await onRate(booking._id, stars);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-xl bg-white/45 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-ink-500">
+          {current ? "Your rating" : "How was this session?"}
+        </span>
+        <span className="flex items-center gap-0.5" onMouseLeave={() => setHover(0)}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              type="button"
+              disabled={busy}
+              onMouseEnter={() => setHover(n)}
+              onClick={() => submit(n)}
+              aria-label={`Rate ${n} star${n === 1 ? "" : "s"}`}
+              className={cx(
+                "text-base leading-none transition-transform hover:scale-110 disabled:opacity-50",
+                (hover || current) >= n ? "text-amber-500" : "text-slate-300"
+              )}
+            >
+              ★
+            </button>
+          ))}
+        </span>
+        {current > 0 && !busy && (
+          <span className="text-xs text-ink-400">— tap a star to change it</span>
+        )}
+      </div>
+      {booking.rating?.comment && (
+        <p className="mt-1.5 text-xs italic text-ink-500">“{booking.rating.comment}”</p>
+      )}
+      {error && (
+        <p role="alert" className="mt-1.5 text-xs text-red-600">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------- card */
 
-function SessionCard({ booking: b, isMentor, isPast, busy, onStatus, onMessage }) {
+function SessionCard({ booking: b, isMentor, isPast, busy, onStatus, onMessage, onRate }) {
   const person = isMentor ? b.student : b.mentor;
   const soon = isPast ? null : countdown(b.start);
   // A session that has already happened can't be confirmed, declined, or
@@ -124,6 +184,7 @@ function SessionCard({ booking: b, isMentor, isPast, busy, onStatus, onMessage }
         )}
         {person?._id && (
           <button
+            key="message"
             onClick={() => onMessage(person._id)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-4 py-1.5 text-sm font-medium text-ink-700 transition-colors hover:bg-slate-200"
           >
@@ -132,6 +193,12 @@ function SessionCard({ booking: b, isMentor, isPast, busy, onStatus, onMessage }
           </button>
         )}
       </div>
+
+      {/* Only a student, only a confirmed session, only after it happened —
+          the same three conditions the API enforces. */}
+      {!isMentor && isPast && b.status === "confirmed" && (
+        <RateSession booking={b} onRate={onRate} />
+      )}
     </div>
   );
 }
@@ -166,6 +233,11 @@ export default function Bookings() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const rate = async (id, stars) => {
+    await api(`/api/bookings/${id}/rating`, { method: "PUT", body: { stars } });
+    load(); // refresh so the stars reflect what the server stored
   };
 
   // Cross-link into Module 2: talk to the other person without hunting for
@@ -215,6 +287,7 @@ export default function Bookings() {
               busy={busy}
               onStatus={setStatus}
               onMessage={openChat}
+              onRate={rate}
             />
           ))}
         </div>

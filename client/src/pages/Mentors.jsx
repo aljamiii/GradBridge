@@ -20,7 +20,7 @@ const humanHours = (h) => {
 // percentage. Match says "relevant"; this says "reliable".
 function TrackRecord({ record }) {
   if (!record) return null;
-  const { sessionsCompleted, confirmRate, medianResponseHours } = record;
+  const { sessionsCompleted, confirmRate, medianResponseHours, avgRating, ratingCount } = record;
 
   const facts = [
     sessionsCompleted > 0 &&
@@ -28,6 +28,19 @@ function TrackRecord({ record }) {
     medianResponseHours != null && `usually replies in ${humanHours(medianResponseHours)}`,
     confirmRate != null && `confirms ${Math.round(confirmRate * 100)}% of requests`,
   ].filter(Boolean);
+
+  // The rating sits apart from the derived stats: it is a human judgement of
+  // quality, not a fact about behaviour. Always paired with its count so a
+  // single 5★ can't masquerade as a reputation.
+  const rating = avgRating != null && (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">
+      <span aria-hidden="true">★</span>
+      <span className="font-semibold">{avgRating.toFixed(1)}</span>
+      <span className="text-amber-600/80">
+        ({ratingCount} rating{ratingCount === 1 ? "" : "s"})
+      </span>
+    </span>
+  );
 
   if (facts.length === 0) {
     return (
@@ -39,16 +52,19 @@ function TrackRecord({ record }) {
 
   return (
     <p
-      className="mt-2 text-xs text-ink-500"
+      className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-ink-500"
       title="Calculated from real booking activity — not self-reported."
     >
-      {facts.map((f, i) => (
-        <span key={f}>
-          {i > 0 && <span className="text-ink-300"> · </span>}
-          {i === 0 && "✓ "}
-          {f}
-        </span>
-      ))}
+      {rating}
+      <span>
+        {facts.map((f, i) => (
+          <span key={f}>
+            {i > 0 && <span className="text-ink-300"> · </span>}
+            {i === 0 && "✓ "}
+            {f}
+          </span>
+        ))}
+      </span>
     </p>
   );
 }

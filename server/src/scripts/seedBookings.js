@@ -21,44 +21,49 @@ const hours = (n) => n * 3600 * 1000;
 const days = (n) => n * 24 * hours(1);
 
 // email → how this mentor behaves. `answers` is a list of past requests:
-// hoursToAnswer = null means they never replied (still pending).
+// hoursToAnswer = null means they never replied (still pending). `stars` is
+// the student's rating of a session that happened — omitted where the student
+// never got round to rating, which is the common real-world case.
 const HISTORY = {
   // Fast, reliable, busy — the profile a student wants to see.
   "tanjina.mentor@gradbridge.dev": {
     answers: [
-      { agoDays: 40, hoursToAnswer: 2, status: "confirmed", topic: "SOP structure review" },
-      { agoDays: 33, hoursToAnswer: 3, status: "confirmed", topic: "Waterloo application plan" },
-      { agoDays: 26, hoursToAnswer: 1, status: "confirmed", topic: "ML research statement" },
-      { agoDays: 18, hoursToAnswer: 4, status: "confirmed", topic: "Scholarship shortlist" },
+      { agoDays: 40, hoursToAnswer: 2, status: "confirmed", topic: "SOP structure review", stars: 5, comment: "Rewrote my opening paragraph with me line by line." },
+      { agoDays: 33, hoursToAnswer: 3, status: "confirmed", topic: "Waterloo application plan", stars: 5 },
+      { agoDays: 26, hoursToAnswer: 1, status: "confirmed", topic: "ML research statement", stars: 4 },
+      { agoDays: 18, hoursToAnswer: 4, status: "confirmed", topic: "Scholarship shortlist", stars: 5, comment: "Found two funds I had never heard of." },
       { agoDays: 11, hoursToAnswer: 2, status: "declined", topic: "Mock interview" },
-      { agoDays: 5, hoursToAnswer: 3, status: "confirmed", topic: "Funding options" },
+      { agoDays: 5, hoursToAnswer: 3, status: "confirmed", topic: "Funding options", stars: 5 },
     ],
   },
   // Experienced but slower to reply.
   "mahmudul.mentor@gradbridge.dev": {
     answers: [
-      { agoDays: 45, hoursToAnswer: 30, status: "confirmed", topic: "US F1 interview prep" },
-      { agoDays: 30, hoursToAnswer: 44, status: "confirmed", topic: "RA position search" },
+      { agoDays: 45, hoursToAnswer: 30, status: "confirmed", topic: "US F1 interview prep", stars: 4 },
+      { agoDays: 30, hoursToAnswer: 44, status: "confirmed", topic: "RA position search", stars: 4, comment: "Honest about how competitive RA funding is." },
       { agoDays: 20, hoursToAnswer: 26, status: "declined", topic: "Weekend session request" },
-      { agoDays: 9, hoursToAnswer: 36, status: "confirmed", topic: "Computer vision reading list" },
+      { agoDays: 9, hoursToAnswer: 36, status: "confirmed", topic: "Computer vision reading list", stars: 5 },
     ],
   },
-  // Selective: declines a lot, which the confirm rate should show honestly.
+  // Selective: declines a lot, and the one session he ran landed mid-range.
+  // Both facts should show honestly rather than being smoothed away.
   "rafiul.mentor@gradbridge.dev": {
     answers: [
       { agoDays: 38, hoursToAnswer: 8, status: "declined", topic: "General chat" },
-      { agoDays: 29, hoursToAnswer: 6, status: "confirmed", topic: "Blocked account walkthrough" },
+      { agoDays: 29, hoursToAnswer: 6, status: "confirmed", topic: "Blocked account walkthrough", stars: 3, comment: "Useful, but we ran out of time." },
       { agoDays: 21, hoursToAnswer: 9, status: "declined", topic: "CV review" },
       { agoDays: 12, hoursToAnswer: 7, status: "declined", topic: "Unrelated topic" },
     ],
   },
   "shafiqul.mentor@gradbridge.dev": {
     answers: [
-      { agoDays: 35, hoursToAnswer: 12, status: "confirmed", topic: "Alberta admissions timeline" },
-      { agoDays: 24, hoursToAnswer: 14, status: "confirmed", topic: "SOP review" },
-      { agoDays: 13, hoursToAnswer: 10, status: "confirmed", topic: "Document checklist" },
+      { agoDays: 35, hoursToAnswer: 12, status: "confirmed", topic: "Alberta admissions timeline", stars: 5 },
+      { agoDays: 24, hoursToAnswer: 14, status: "confirmed", topic: "SOP review", stars: 4 },
+      { agoDays: 13, hoursToAnswer: 10, status: "confirmed", topic: "Document checklist", stars: 4 },
     ],
   },
+  // Sessions completed but never rated — the card must not imply a rating
+  // exists just because sessions do.
   "imran.mentor@gradbridge.dev": {
     answers: [
       { agoDays: 28, hoursToAnswer: 20, status: "confirmed", topic: "UK visa documents" },
@@ -69,8 +74,8 @@ const HISTORY = {
   // Exactly two answers — below the threshold, so no rate should be shown.
   "sadia.mentor@gradbridge.dev": {
     answers: [
-      { agoDays: 22, hoursToAnswer: 5, status: "confirmed", topic: "Montreal settling in" },
-      { agoDays: 8, hoursToAnswer: 6, status: "confirmed", topic: "Healthcare career paths" },
+      { agoDays: 22, hoursToAnswer: 5, status: "confirmed", topic: "Montreal settling in", stars: 5 },
+      { agoDays: 8, hoursToAnswer: 6, status: "confirmed", topic: "Healthcare career paths", stars: 5 },
     ],
   },
   // Farhana and Ayesha are left with no history on purpose: the UI must have
@@ -111,6 +116,16 @@ for (const [email, plan] of Object.entries(HISTORY)) {
       topic: `${TAG} ${a.topic}`,
       status: a.status,
       ...(respondedAt ? { respondedAt } : {}),
+      ...(a.stars
+        ? {
+            rating: {
+              stars: a.stars,
+              comment: a.comment ?? "",
+              // Rated a day or so after the session took place.
+              ratedAt: new Date(start.getTime() + days(1)),
+            },
+          }
+        : {}),
       createdAt,
       updatedAt: respondedAt ?? createdAt,
       __v: 0,
