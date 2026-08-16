@@ -43,12 +43,15 @@ export const deliverMessage = async ({ conversation, sender, text, isSystem = fa
   conversation.lastMessageText = isSystem ? text : text.slice(0, 80);
   await conversation.save();
 
-  // Live delivery: everyone viewing this thread + the recipient's personal
-  // room (for the navbar unread badge, even if they're on another page).
+  // Live delivery: everyone viewing this thread, then BOTH inboxes. The
+  // recipient needs it for the unread badge; the sender needs it too, or
+  // their own list keeps the stale preview and old position until a reload.
   const io = getIO();
   if (io) {
     io.to(`convo:${conversation._id}`).emit("message:new", message);
-    io.to(`user:${recipient}`).emit("inbox:update");
+    for (const participant of conversation.participants) {
+      io.to(`user:${participant}`).emit("inbox:update");
+    }
   }
   return message;
 };
@@ -107,6 +110,15 @@ export const listConversations = async (req, res, next) => {
           unread: await Message.countDocuments({ conversation: c._id, unreadFor: req.user._id }),
         };
       })
+    );
+
+    // Inbox order: threads that need a reply first, then the most recent.
+    // The Mongo sort above already ordered by recency; this lifts unread
+    // threads above read ones while keeping recency inside each group.
+    withUnread.sort(
+      (a, b) =>
+        Number(b.unread > 0) - Number(a.unread > 0) ||
+        new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
     );
 
     res.json({ success: true, conversations: withUnread });

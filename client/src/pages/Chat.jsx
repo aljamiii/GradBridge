@@ -8,6 +8,9 @@ import { Avatar, Badge, Button, EmptyState, Skeleton, cx } from "../components/u
 
 /* ---------------------------------------------------------------- helpers */
 
+// How long a pause counts as "stopped typing".
+const TYPING_IDLE_MS = 2500;
+
 const time = (d) =>
   new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -61,6 +64,28 @@ function Bubble({ msg, mine }) {
   );
 }
 
+/* Three bouncing dots in a bubble shaped like an incoming message, so it
+   reads as "their next message is on its way". Staggered delays per dot. */
+function TypingDots({ name }) {
+  return (
+    <div className="flex justify-start">
+      <div className="glass-card flex items-center gap-1.5 rounded-2xl rounded-bl-md !border-white/70 px-4 py-3.5 shadow-sm">
+        <span className="sr-only" aria-live="polite">
+          {name ? `${name} is typing…` : "Typing…"}
+        </span>
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            aria-hidden="true"
+            className="typing-dot h-1.5 w-1.5 rounded-full bg-ink-400"
+            style={{ animationDelay: `${i * 0.18}s` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------- page */
 
 export default function Chat() {
@@ -76,7 +101,10 @@ export default function Chat() {
   const [query, setQuery] = useState("");
   const [picking, setPicking] = useState(false); // "new chat" panel open
   const [connections, setConnections] = useState([]);
+  const [peerTyping, setPeerTyping] = useState(false);
   const bottomRef = useRef(null);
+  const typingRef = useRef(false);   // what we last told the server
+  const typingTimer = useRef(null);  // idle countdown → "stopped typing"
 
   const loadInbox = useCallback(() => {
     api("/api/chat").then((d) => setConversations(d.conversations)).catch(() => {});
@@ -131,21 +159,67 @@ export default function Chat() {
     };
     socket?.on("message:new", onNew);
 
+    // Their dots. A message arriving means they clearly finished typing.
+    const onTyping = ({ conversationId, userId, typing }) => {
+      if (conversationId !== activeId) return;
+      if (String(userId) === String(user.id)) return;
+      setPeerTyping(Boolean(typing));
+    };
+    socket?.on("typing:update", onTyping);
+
     return () => {
+      // Leaving the thread must retract our own dots, or they'd hang on the
+      // other person's screen until their next event.
+      if (typingRef.current) {
+        socket?.emit("typing", { conversationId: activeId, typing: false });
+        typingRef.current = false;
+      }
+      clearTimeout(typingTimer.current);
+      setPeerTyping(false);
       socket?.emit("convo:leave", activeId);
       socket?.off("message:new", onNew);
+      socket?.off("typing:update", onTyping);
     };
   }, [activeId, loadInbox, user.id]);
 
+  // Their dots stop the moment a message from them lands.
+  useEffect(() => {
+    setPeerTyping(false);
+  }, [messages]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, peerTyping]);
+
+  // Emit only when the typing STATE changes, not on every keystroke — one
+  // event when you start, one when you stop, instead of one per character.
+  const signalTyping = useCallback(
+    (isTyping) => {
+      if (!activeId || typingRef.current === isTyping) return;
+      typingRef.current = isTyping;
+      getSocket()?.emit("typing", { conversationId: activeId, typing: isTyping });
+    },
+    [activeId]
+  );
+
+  const onDraftChange = (e) => {
+    const value = e.target.value;
+    setDraft(value);
+    signalTyping(value.trim().length > 0);
+    // Idle timeout: stop the dots if they pause mid-sentence without sending.
+    clearTimeout(typingTimer.current);
+    if (value.trim()) {
+      typingTimer.current = setTimeout(() => signalTyping(false), TYPING_IDLE_MS);
+    }
+  };
 
   const send = (e) => {
     e.preventDefault();
     const text = draft.trim();
     if (!text || !activeId) return;
     setDraft("");
+    clearTimeout(typingTimer.current);
+    signalTyping(false); // the message itself is the end of typing
     getSocket()?.emit("message:send", { conversationId: activeId, text }, (res) => {
       if (res?.ok) {
         setMessages((m) => (m.some((x) => x._id === res.message._id) ? m : [...m, res.message]));
@@ -350,9 +424,11 @@ export default function Chat() {
                     )}
                   </p>
                   <p className="truncate text-xs text-ink-400">
-                    {isOnline(active)
-                      ? <span className="text-sky-600">● Online now</span>
-                      : active?.other?.university || "Offline"}
+                    {peerTyping
+                      ? <span className="text-brand-600">typing…</span>
+                      : isOnline(active)
+                        ? <span className="text-sky-600">● Online now</span>
+                        : active?.other?.university || "Offline"}
                   </p>
                 </div>
               </div>
@@ -389,12 +465,13 @@ export default function Chat() {
                     </div>
                   ))
                 )}
+                {peerTyping && <TypingDots name={active?.other?.name} />}
                 <div ref={bottomRef} />
               </div>
 
               {/* composer */}
               <form onSubmit={send} className="flex gap-2 border-t border-white/60 p-3">
-                <input value={draft} onChange={(e) => setDraft(e.target.value)}
+                <input value={draft} onChange={onDraftChange}
                   placeholder="Write a message…"
                   className="flex-1 rounded-xl border border-white/70 bg-white/70 px-3.5 py-2.5 text-sm text-ink-900 placeholder-slate-400 transition-colors focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10" />
                 <Button type="submit" disabled={!draft.trim()} className="shrink-0 !px-3.5"
