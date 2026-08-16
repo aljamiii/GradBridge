@@ -11,6 +11,10 @@ import { Avatar, Badge, Button, EmptyState, Skeleton, cx } from "../components/u
 // How long a pause counts as "stopped typing".
 const TYPING_IDLE_MS = 2500;
 
+// Matches the `maxlength` on the Message model — stop the user at the limit
+// instead of letting the server reject a long message after they hit send.
+const MAX_MESSAGE_LEN = 2000;
+
 const time = (d) =>
   new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -102,6 +106,8 @@ export default function Chat() {
   const [picking, setPicking] = useState(false); // "new chat" panel open
   const [connections, setConnections] = useState([]);
   const [peerTyping, setPeerTyping] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
   const bottomRef = useRef(null);
   const typingRef = useRef(false);   // what we last told the server
   const typingTimer = useRef(null);  // idle countdown → "stopped typing"
@@ -214,17 +220,46 @@ export default function Chat() {
   };
 
   const send = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     const text = draft.trim();
-    if (!text || !activeId) return;
+    if (!text || !activeId || sending) return;
+
     setDraft("");
+    setSendError("");
+    setSending(true);
     clearTimeout(typingTimer.current);
     signalTyping(false); // the message itself is the end of typing
-    getSocket()?.emit("message:send", { conversationId: activeId, text }, (res) => {
+
+    // Never drop a message silently: if the server rejects it (or the socket
+    // is down and never acks), put the text back so the user can retry.
+    const restore = (why) => {
+      setSending(false);
+      setDraft((d) => d || text);
+      setSendError(why);
+    };
+    const ackTimer = setTimeout(() => restore("Message not sent — check your connection."), 8000);
+
+    const socket = getSocket();
+    if (!socket) return restore("You're offline. Reconnect to send messages.");
+
+    socket.emit("message:send", { conversationId: activeId, text }, (res) => {
+      clearTimeout(ackTimer);
       if (res?.ok) {
+        setSending(false);
         setMessages((m) => (m.some((x) => x._id === res.message._id) ? m : [...m, res.message]));
+      } else {
+        restore(res?.error || "Message not sent.");
       }
     });
+  };
+
+  // Explicit Enter-to-send. An <input> submits on Enter implicitly, but being
+  // explicit keeps it working if the composer ever becomes a textarea.
+  const onComposerKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
   };
 
   // Connections power the "new chat" picker.
@@ -470,15 +505,35 @@ export default function Chat() {
               </div>
 
               {/* composer */}
-              <form onSubmit={send} className="flex gap-2 border-t border-white/60 p-3">
-                <input value={draft} onChange={onDraftChange}
-                  placeholder="Write a message…"
-                  className="flex-1 rounded-xl border border-white/70 bg-white/70 px-3.5 py-2.5 text-sm text-ink-900 placeholder-slate-400 transition-colors focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10" />
-                <Button type="submit" disabled={!draft.trim()} className="shrink-0 !px-3.5"
-                  aria-label="Send">
-                  <Icon name="arrowRight" className="h-4 w-4" strokeWidth={2.2} />
-                </Button>
-              </form>
+              <div className="border-t border-white/60 p-3">
+                {sendError && (
+                  <div role="alert"
+                    className="mb-2 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+                    <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                    <span className="flex-1">{sendError}</span>
+                    <button type="button" onClick={() => setSendError("")}
+                      className="font-semibold text-red-600 hover:text-red-800">
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+                <form onSubmit={send} className="flex gap-2">
+                  <input value={draft} onChange={onDraftChange} onKeyDown={onComposerKeyDown}
+                    maxLength={MAX_MESSAGE_LEN}
+                    placeholder="Write a message…"
+                    aria-label="Write a message"
+                    className="flex-1 rounded-xl border border-white/70 bg-white/70 px-3.5 py-2.5 text-sm text-ink-900 placeholder-slate-400 transition-colors focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10" />
+                  <Button type="submit" disabled={!draft.trim() || sending} className="shrink-0 !px-3.5"
+                    aria-label="Send message">
+                    <Icon name="arrowRight" className="h-4 w-4" strokeWidth={2.2} />
+                  </Button>
+                </form>
+                {draft.length > MAX_MESSAGE_LEN - 200 && (
+                  <p className="mt-1.5 text-right text-[10px] text-ink-400">
+                    {MAX_MESSAGE_LEN - draft.length} characters left
+                  </p>
+                )}
+              </div>
             </>
           )}
         </section>

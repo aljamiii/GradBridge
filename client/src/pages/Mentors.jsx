@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import ConnectButton, { useConnectionStatuses } from "../components/Connect";
+import Icon from "../components/Icon";
+import { Avatar, EmptyState, Skeleton } from "../components/ui";
 
 const inputClass =
   "w-full rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
@@ -67,35 +69,58 @@ function BookingForm({ mentor, onDone }) {
   );
 }
 
-function MentorCard({ mentor }) {
+function MentorCard({ mentor, isTop }) {
   const [showBooking, setShowBooking] = useState(false);
+  const [chatError, setChatError] = useState("");
   const navigate = useNavigate();
 
   const openChat = async () => {
-    const data = await api("/api/chat/start", {
-      method: "POST",
-      body: { userId: mentor.id },
-    });
-    navigate(`/chat?c=${data.conversationId}`);
+    try {
+      const data = await api("/api/chat/start", {
+        method: "POST",
+        body: { userId: mentor.id },
+      });
+      navigate(`/chat?c=${data.conversationId}`);
+    } catch (err) {
+      setChatError(err.message);
+    }
   };
 
   return (
     <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h3 className="font-semibold text-ink-900">{mentor.name}</h3>
-          <p className="text-sm text-ink-500">
-            {mentor.qualification}
-            {mentor.university && ` · ${mentor.university}`}
-          </p>
+        <div className="flex min-w-0 gap-3">
+          <Avatar name={mentor.name} size="md" />
+          <div className="min-w-0">
+            <h3 className="flex flex-wrap items-center gap-2 font-semibold text-ink-900">
+              {mentor.name}
+              {isTop && (
+                <span className="rounded-full bg-brand-500/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-700">
+                  Best match
+                </span>
+              )}
+            </h3>
+            <p className="text-sm text-ink-500">
+              {mentor.qualification}
+              {mentor.university && ` · ${mentor.university}`}
+            </p>
+          </div>
         </div>
         {mentor.matchScore > 0 && (
-          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700"
-            title={`Matched on: ${mentor.matchedOn.join(", ")}`}>
+          <span className="shrink-0 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
             🎯 {mentor.matchScore} match{mentor.matchScore > 1 ? "es" : ""}
           </span>
         )}
       </div>
+
+      {/* Why this mentor ranks where they do. Previously this only existed as
+          a title tooltip, which made the ranking look arbitrary on screen. */}
+      {mentor.matchedOn?.length > 0 && (
+        <p className="mt-2 text-xs text-ink-400">
+          Ranked on your profile overlap:{" "}
+          <span className="font-medium text-ink-500">{mentor.matchedOn.join(" · ")}</span>
+        </p>
+      )}
 
       {mentor.expertise?.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -123,6 +148,10 @@ function MentorCard({ mentor }) {
         </button>
         <ConnectButton userId={mentor.id} name={mentor.name} size="md" />
       </div>
+
+      {chatError && (
+        <p role="alert" className="mt-2 text-xs text-red-600">{chatError}</p>
+      )}
 
       {showBooking && <BookingForm mentor={mentor} />}
     </div>
@@ -156,13 +185,23 @@ export default function Mentors() {
 
       <div className="mt-6 space-y-4">
         {mentors === null ? (
-          <p className="py-10 text-center text-ink-400">Loading mentors…</p>
+          [...Array(3)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)
         ) : mentors.length === 0 ? (
-          <p className="py-10 text-center text-ink-400">
-            No approved mentors yet — check back soon.
-          </p>
+          <EmptyState
+            icon={<Icon name="users" className="h-6 w-6" />}
+            title="No mentors available yet"
+            description="Mentors appear here once an admin verifies them. Meanwhile, the Network Map has students already living where you want to go."
+            className="!py-14"
+          />
         ) : (
-          mentors.map((m) => <MentorCard key={m.id} mentor={m} />)
+          mentors.map((m, i) => (
+            <MentorCard
+              key={m.id}
+              mentor={m}
+              // Only crown a leader when the ranking actually separates them.
+              isTop={i === 0 && m.matchScore > 0 && m.matchScore > (mentors[1]?.matchScore ?? 0)}
+            />
+          ))
         )}
       </div>
     </div>
