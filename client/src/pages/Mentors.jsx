@@ -114,11 +114,17 @@ function MentorCard({ mentor, isTop, maxScore }) {
               {mentor.qualification}
               {mentor.university && ` · ${mentor.university}`}
             </p>
+            {(mentor.city || mentor.country) && (
+              <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-ink-400">
+                <Icon name="location" className="h-3 w-3 shrink-0" />
+                {[mentor.city, mentor.country].filter(Boolean).join(", ")}
+              </p>
+            )}
           </div>
         </div>
         {mentor.matchScore > 0 && (
           <span className="shrink-0 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
-            🎯 {mentor.matchScore} match{mentor.matchScore > 1 ? "es" : ""}
+            🎯 {mentor.matchScore} of {maxScore} pts
           </span>
         )}
       </div>
@@ -140,7 +146,7 @@ function MentorCard({ mentor, isTop, maxScore }) {
               />
             </div>
             <span className="shrink-0 text-[11px] font-medium text-ink-400">
-              {mentor.matchScore}/{maxScore || 0} signals
+              {mentor.matchScore}/{maxScore || 0} points
             </span>
           </div>
           <ul className="space-y-1">
@@ -156,7 +162,15 @@ function MentorCard({ mentor, isTop, maxScore }) {
                   {b.matched ? "✓" : "–"}
                 </span>
                 <span className={b.matched ? "text-ink-600" : "text-ink-400"}>
-                  <span className="font-medium">{b.label}:</span> {b.value}
+                  <span className="font-medium">{b.label}</span>
+                  {/* Show the weight so "5 of 6" is arithmetic the reader can
+                      check, not a number they have to trust. */}
+                  <span className={b.matched ? "text-green-700" : "text-ink-300"}>
+                    {" "}
+                    ({b.matched ? `+${b.weight}` : `0 of ${b.weight}`})
+                  </span>
+                  <span className="text-ink-400">: </span>
+                  {b.value}
                   {b.matched && b.hits?.length > 0 && (
                     <span className="text-green-700"> → {b.hits.join(", ")}</span>
                   )}
@@ -320,14 +334,30 @@ export default function Mentors() {
           )}
 
           {showRule && (
-            <p className="mt-3 rounded-lg bg-white/50 p-3 text-xs leading-relaxed text-ink-500">
-              <span className="font-semibold text-ink-600">Rule-based, no AI.</span>{" "}
-              Your country, research interest, and degree are split into words
-              (lowercased, 3+ letters, common words like “university” dropped).
-              The same is done to each mentor’s qualification, university, and
-              expertise tags. The score is the number of distinct words that
-              appear in both — so every rank is a number you can recount by hand.
-            </p>
+            <div className="mt-3 rounded-lg bg-white/50 p-3 text-xs leading-relaxed text-ink-500">
+              <p>
+                <span className="font-semibold text-ink-600">Rule-based, no AI.</span>{" "}
+                Each criterion below either matches or it doesn’t, and a match is
+                worth a fixed number of points — so the total is arithmetic you
+                can check by hand, and it doesn’t change if you reword your profile.
+              </p>
+              <ul className="mt-2 space-y-0.5">
+                {criteria.map((c) => (
+                  <li key={c.label}>
+                    <span className="font-medium text-ink-600">
+                      {c.label} — {c.weight} point{c.weight === 1 ? "" : "s"}
+                    </span>
+                    {c.label === "Preferred country"
+                      ? " — compared against the country the mentor actually studies in."
+                      : " — matched on shared words (lowercased, 3+ letters, common words like “university” dropped)."}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2">
+                Research interest is weighted highest because it is what a
+                session is actually about; a shared degree background breaks ties.
+              </p>
+            </div>
           )}
         </div>
       )}

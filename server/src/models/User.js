@@ -82,6 +82,12 @@ const userSchema = new mongoose.Schema(
     mentorProfile: {
       qualification: String, // e.g., "MSc, University of Toronto"
       university: String,
+      // Where the mentor actually studies. Matching used to infer this from
+      // the expertise tags, so a mentor in Toronto only counted as "Canada"
+      // if they happened to tag "Canada visas" — a real field makes the
+      // country criterion exact instead of accidental.
+      country: String,
+      city: String,
       expertise: [String], // e.g., ["SOP review", "Canada visas"]
       availability: String, // e.g., "Weekends, 8-10pm BD time"
       isVisible: { type: Boolean, default: true }, // mentor can hide from search
