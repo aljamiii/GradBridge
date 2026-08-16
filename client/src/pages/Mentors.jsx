@@ -8,6 +8,11 @@ import { Avatar, EmptyState, Skeleton, cx } from "../components/ui";
 const inputClass =
   "w-full rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
+// Criterion weights are stored as points; the UI speaks in percent of the
+// rule's ceiling. The headline is computed from the raw scores (never from
+// summing rounded rows), so it is always exact.
+const asPercent = (value, total) => (total > 0 ? Math.round((value / total) * 100) : 0);
+
 // Earliest bookable slot, as the "YYYY-MM-DDTHH:mm" that datetime-local wants
 // (toISOString would shift into UTC and let the user pick a past local time).
 const minBookingTime = () => {
@@ -124,7 +129,7 @@ function MentorCard({ mentor, isTop, maxScore }) {
         </div>
         {mentor.matchScore > 0 && (
           <span className="shrink-0 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
-            🎯 {mentor.matchScore} of {maxScore} pts
+            🎯 {asPercent(mentor.matchScore, maxScore)}% match
           </span>
         )}
       </div>
@@ -146,7 +151,7 @@ function MentorCard({ mentor, isTop, maxScore }) {
               />
             </div>
             <span className="shrink-0 text-[11px] font-medium text-ink-400">
-              {mentor.matchScore}/{maxScore || 0} points
+              {asPercent(mentor.matchScore, maxScore)}% profile match
             </span>
           </div>
           <ul className="space-y-1">
@@ -163,11 +168,16 @@ function MentorCard({ mentor, isTop, maxScore }) {
                 </span>
                 <span className={b.matched ? "text-ink-600" : "text-ink-400"}>
                   <span className="font-medium">{b.label}</span>
-                  {/* Show the weight so "5 of 6" is arithmetic the reader can
-                      check, not a number they have to trust. */}
+                  {/* Each criterion's share of the total, so the rows add up
+                      to the headline — arithmetic the reader can check rather
+                      than a number they have to trust. */}
                   <span className={b.matched ? "text-green-700" : "text-ink-300"}>
                     {" "}
-                    ({b.matched ? `+${b.weight}` : `0 of ${b.weight}`})
+                    (
+                    {b.matched
+                      ? `+${asPercent(b.weight, maxScore)}%`
+                      : `0 of ${asPercent(b.weight, maxScore)}%`}
+                    )
                   </span>
                   <span className="text-ink-400">: </span>
                   {b.value}
@@ -338,14 +348,14 @@ export default function Mentors() {
               <p>
                 <span className="font-semibold text-ink-600">Rule-based, no AI.</span>{" "}
                 Each criterion below either matches or it doesn’t, and a match is
-                worth a fixed number of points — so the total is arithmetic you
-                can check by hand, and it doesn’t change if you reword your profile.
+                worth a fixed share of the total — so the percentage is arithmetic
+                you can check by hand, and it doesn’t change if you reword your profile.
               </p>
               <ul className="mt-2 space-y-0.5">
                 {criteria.map((c) => (
                   <li key={c.label}>
                     <span className="font-medium text-ink-600">
-                      {c.label} — {c.weight} point{c.weight === 1 ? "" : "s"}
+                      {c.label} — worth {asPercent(c.weight, maxScore)}%
                     </span>
                     {c.label === "Preferred country"
                       ? " — compared against the country the mentor actually studies in."
