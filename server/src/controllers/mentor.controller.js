@@ -8,6 +8,69 @@
 // silently halve its influence. Weights below are a deliberate decision that
 // can be defended; token counts were an accident of phrasing.
 import User from "../models/User.js";
+import Booking from "../models/Booking.js";
+
+// Below this many answered requests, a rate is noise dressed up as evidence
+// ("100% confirmed" from a single booking). We hide it rather than mislead.
+const MIN_RESPONSES_FOR_RATE = 3;
+
+const median = (nums) => {
+  if (!nums.length) return null;
+  const s = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+};
+
+// Track record per mentor, computed from bookings that already exist — nothing
+// here is self-reported, which is the whole point of showing it.
+// ONE aggregation for every mentor on the page, not a query per card.
+const trackRecordFor = async (mentorIds) => {
+  const now = new Date();
+  const rows = await Booking.aggregate([
+    { $match: { mentor: { $in: mentorIds } } },
+    {
+      $group: {
+        _id: "$mentor",
+        completed: {
+          $sum: {
+            $cond: [{ $and: [{ $eq: ["$status", "confirmed"] }, { $lt: ["$start", now] }] }, 1, 0],
+          },
+        },
+        confirmed: { $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] } },
+        declined: { $sum: { $cond: [{ $eq: ["$status", "declined"] }, 1, 0] } },
+        // Milliseconds from request to the mentor's answer. Prefer the
+        // explicit stamp; fall back to updatedAt for rows created before the
+        // field existed. Null for anything the mentor hasn't answered.
+        responseMs: {
+          $push: {
+            $cond: [
+              { $in: ["$status", ["confirmed", "declined"]] },
+              { $subtract: [{ $ifNull: ["$respondedAt", "$updatedAt"] }, "$createdAt"] },
+              null,
+            ],
+          },
+        },
+      },
+    },
+  ]);
+
+  const byMentor = new Map();
+  for (const r of rows) {
+    const answered = r.confirmed + r.declined;
+    const times = r.responseMs.filter((ms) => typeof ms === "number" && ms >= 0);
+    byMentor.set(String(r._id), {
+      sessionsCompleted: r.completed,
+      // Rates need enough answers to mean anything.
+      confirmRate: answered >= MIN_RESPONSES_FOR_RATE ? r.confirmed / answered : null,
+      responsesCounted: answered,
+      medianResponseHours:
+        times.length >= MIN_RESPONSES_FOR_RATE
+          ? Math.round((median(times) / 3600000) * 10) / 10
+          : null,
+    });
+  }
+  return byMentor;
+};
 
 // "MSc in CS, University of Toronto" → ["msc", "university", "toronto", ...]
 const tokenize = (...values) =>
@@ -85,6 +148,8 @@ export const listMentors = async (req, res, next) => {
       "mentorProfile.isVisible": true,
     }).lean();
 
+    const trackRecord = await trackRecordFor(mentors.map((m) => m._id));
+
     const p = req.user.studentProfile ?? {};
 
     // ?need=visa — validated against the fixed vocabulary, so an unknown or
@@ -157,6 +222,15 @@ export const listMentors = async (req, res, next) => {
           matchScore,
           matchedOn: breakdown.filter((b) => b.matched).flatMap((b) => b.hits),
           breakdown,
+          // Deliberately NOT folded into matchScore: the match answers
+          // "relevant", the track record answers "reliable". Blending them
+          // would destroy the auditability of the ranking.
+          trackRecord: trackRecord.get(String(m._id)) ?? {
+            sessionsCompleted: 0,
+            confirmRate: null,
+            responsesCounted: 0,
+            medianResponseHours: null,
+          },
         };
       })
       // Name is the tiebreaker so equal scores render in a stable order

@@ -13,6 +13,11 @@ const bookingSchema = new mongoose.Schema(
       enum: ["pending", "confirmed", "declined", "cancelled"],
       default: "pending", // mentor confirms or declines; student may cancel
     },
+    // When the MENTOR first answered (confirmed or declined). Recorded
+    // separately because `updatedAt` moves on any later edit — a session that
+    // was confirmed quickly then cancelled weeks later would otherwise look
+    // like a weeks-long response time.
+    respondedAt: Date,
   },
   { timestamps: true }
 );

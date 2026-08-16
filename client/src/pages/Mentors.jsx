@@ -8,6 +8,51 @@ import { Avatar, EmptyState, Skeleton, cx } from "../components/ui";
 const inputClass =
   "w-full rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
+const humanHours = (h) => {
+  if (h == null) return null;
+  if (h < 1) return "under an hour";
+  if (h < 24) return `~${h % 1 === 0 ? h : h.toFixed(1)} hours`;
+  const d = Math.round(h / 24);
+  return `~${d} day${d === 1 ? "" : "s"}`;
+};
+
+// Track record, derived from real bookings — the counterpart to the match
+// percentage. Match says "relevant"; this says "reliable".
+function TrackRecord({ record }) {
+  if (!record) return null;
+  const { sessionsCompleted, confirmRate, medianResponseHours } = record;
+
+  const facts = [
+    sessionsCompleted > 0 &&
+      `${sessionsCompleted} session${sessionsCompleted === 1 ? "" : "s"} completed`,
+    medianResponseHours != null && `usually replies in ${humanHours(medianResponseHours)}`,
+    confirmRate != null && `confirms ${Math.round(confirmRate * 100)}% of requests`,
+  ].filter(Boolean);
+
+  if (facts.length === 0) {
+    return (
+      <p className="mt-2 text-xs text-ink-400">
+        ✦ New mentor — no completed sessions yet
+      </p>
+    );
+  }
+
+  return (
+    <p
+      className="mt-2 text-xs text-ink-500"
+      title="Calculated from real booking activity — not self-reported."
+    >
+      {facts.map((f, i) => (
+        <span key={f}>
+          {i > 0 && <span className="text-ink-300"> · </span>}
+          {i === 0 && "✓ "}
+          {f}
+        </span>
+      ))}
+    </p>
+  );
+}
+
 // Criterion weights are stored as points; the UI speaks in percent of the
 // rule's ceiling. The headline is computed from the raw scores (never from
 // summing rounded rows), so it is always exact.
@@ -133,6 +178,8 @@ function MentorCard({ mentor, isTop, maxScore }) {
           </span>
         )}
       </div>
+
+      <TrackRecord record={mentor.trackRecord} />
 
       {/* The rule, audited one profile field at a time. A bare score can't be
           checked by the person it's about; this can. */}

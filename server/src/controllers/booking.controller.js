@@ -126,6 +126,11 @@ export const setBookingStatus = async (req, res, next) => {
     }
 
     booking.status = status;
+    // Stamp the mentor's first answer only — a student cancelling later must
+    // not overwrite how quickly the mentor replied.
+    if (req.user.role === "mentor" && !booking.respondedAt) {
+      booking.respondedAt = new Date();
+    }
     await booking.save();
 
     // Notify the other side inside the chat thread.
