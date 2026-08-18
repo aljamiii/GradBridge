@@ -50,6 +50,33 @@ function PostCard({ post, onChanged, onPickTag, onPickCity, activeTag, activeCit
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [actError, setActError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(null);
+
+  const startEdit = () => {
+    setDraft({
+      title: post.title,
+      body: post.body,
+      tags: (post.tags ?? []).join(", "),
+      city: post.city ?? "",
+    });
+    setEditing(true);
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setActError("");
+    try {
+      const d = await api(`/api/forum/${post.id}`, { method: "PUT", body: draft });
+      onChanged(d.post);
+      setEditing(false);
+    } catch (err) {
+      setActError(err.message); // keep the form open so nothing typed is lost
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Returns whether it worked, so callers can decide what to keep. Swallowing
   // the error here used to clear a reply the server never accepted.
@@ -78,18 +105,42 @@ function PostCard({ post, onChanged, onPickTag, onPickCity, activeTag, activeCit
   return (
     <Card className="!p-0">
       <div className="flex gap-4 p-5">
-        {/* vote rail */}
-        <button onClick={() => act("upvote")} disabled={busy}
-          aria-pressed={post.upvotedByMe}
-          className={cx(
-            "flex h-fit shrink-0 flex-col items-center gap-0.5 rounded-xl px-2.5 py-2 transition-colors",
-            post.upvotedByMe
-              ? "bg-brand-500/12 text-brand-600 ring-1 ring-brand-500/20"
-              : "text-ink-400 hover:bg-white/70 hover:text-brand-600"
-          )}>
-          <Icon name="trendingUp" className="h-4 w-4" strokeWidth={2.2} />
-          <span className="text-sm font-bold tabular-nums">{post.upvoteCount}</span>
-        </button>
+        {/* vote rail — net score between the two arrows */}
+        <div className="flex h-fit shrink-0 flex-col items-center gap-0.5 rounded-xl px-1.5 py-1.5">
+          <button onClick={() => act("vote", { dir: 1 })} disabled={busy}
+            aria-pressed={post.upvotedByMe}
+            aria-label={post.upvotedByMe ? "Remove your upvote" : "Upvote this post"}
+            title={post.upvotedByMe ? "Remove your upvote" : "This helped"}
+            className={cx(
+              "rounded-lg p-1 transition-colors",
+              post.upvotedByMe
+                ? "bg-brand-500/12 text-brand-600 ring-1 ring-brand-500/20"
+                : "text-ink-400 hover:bg-white/70 hover:text-brand-600"
+            )}>
+            <Icon name="trendingUp" className="h-4 w-4" strokeWidth={2.2} />
+          </button>
+
+          <span className={cx(
+            "text-sm font-bold tabular-nums",
+            post.score > 0 ? "text-brand-700" : post.score < 0 ? "text-red-500" : "text-ink-400"
+          )}
+            title={`${post.upvoteCount} up · ${post.downvoteCount} down`}>
+            {post.score}
+          </span>
+
+          <button onClick={() => act("vote", { dir: -1 })} disabled={busy}
+            aria-pressed={post.downvotedByMe}
+            aria-label={post.downvotedByMe ? "Remove your downvote" : "Downvote this post"}
+            title={post.downvotedByMe ? "Remove your downvote" : "This wasn't accurate or helpful"}
+            className={cx(
+              "rounded-lg p-1 transition-colors",
+              post.downvotedByMe
+                ? "bg-red-500/12 text-red-500 ring-1 ring-red-500/20"
+                : "text-ink-400 hover:bg-white/70 hover:text-red-500"
+            )}>
+            <Icon name="trendingDown" className="h-4 w-4" strokeWidth={2.2} />
+          </button>
+        </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2.5">
@@ -98,6 +149,9 @@ function PostCard({ post, onChanged, onPickTag, onPickCity, activeTag, activeCit
               <p className="text-xs text-ink-400">
                 <span className="font-semibold text-ink-700">{post.authorName}</span>
                 {" · "}{timeAgo(post.createdAt)}
+                {post.editedAt && (
+                  <span title={`Edited ${timeAgo(post.editedAt)}`}> · edited</span>
+                )}
                 {post.city && (
                   <> · <button
                     onClick={() => onPickCity?.(post.city)}
@@ -112,22 +166,61 @@ function PostCard({ post, onChanged, onPickTag, onPickCity, activeTag, activeCit
                 )}
               </p>
             </div>
-            {/* Connect with someone whose answer helped you. */}
-            <ConnectButton userId={post.author} name={post.authorName} />
+            {/* Your own post gets Edit; everyone else's gets Connect. */}
+            {post.isMine ? (
+              <button onClick={startEdit}
+                className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-ink-500 transition-colors hover:bg-white/70 hover:text-brand-700">
+                Edit
+              </button>
+            ) : (
+              <ConnectButton userId={post.author} name={post.authorName} />
+            )}
           </div>
 
-          <button onClick={() => setExpanded((v) => !v)}
-            className="mt-2 block text-left">
-            <h3 className="font-bold leading-snug text-ink-900 transition-colors hover:text-brand-700">
-              {post.title}
-            </h3>
-          </button>
+          {editing ? (
+            <form onSubmit={saveEdit} className="mt-2 space-y-2">
+              <Input value={draft.title} maxLength={150}
+                onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                placeholder="Title" aria-label="Post title" />
+              <Textarea rows={5} value={draft.body} maxLength={5000}
+                onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+                placeholder="What happened, with numbers where you have them" aria-label="Post body" />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input value={draft.tags}
+                  onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
+                  placeholder="Tags, comma separated (max 5)" aria-label="Tags" />
+                <Input value={draft.city}
+                  onChange={(e) => setDraft({ ...draft, city: e.target.value })}
+                  placeholder="City" aria-label="City" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button type="submit" disabled={busy || !draft.title.trim() || !draft.body.trim()}>
+                  {busy ? "Saving…" : "Save changes"}
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+                <span className="text-xs text-ink-400">
+                  Editing marks the post as edited for readers.
+                </span>
+              </div>
+            </form>
+          ) : (
+            <>
+              <button onClick={() => setExpanded((v) => !v)}
+                className="mt-2 block text-left">
+                <h3 className="font-bold leading-snug text-ink-900 transition-colors hover:text-brand-700">
+                  {post.title}
+                </h3>
+              </button>
 
-          {!expanded && (
-            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink-500">{post.body}</p>
+              {!expanded && (
+                <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink-500">{post.body}</p>
+              )}
+            </>
           )}
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className={cx("mt-3 flex flex-wrap items-center gap-2", editing && "hidden")}>
             {/* Tapping a tag is the gesture people expect; previously these
                 were inert and only the sidebar could filter. */}
             {post.tags.map((t) => (
