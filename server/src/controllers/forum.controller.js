@@ -66,10 +66,16 @@ const PAGE_SIZE = 30;
 // GET /api/forum?tag=&city=&sort=new|top
 export const listPosts = async (req, res, next) => {
   try {
-    const { tag, city, sort = "new" } = req.query;
+    const { tag, city, q, sort = "new" } = req.query;
 
     const filter = {};
     if (tag) filter.tags = String(tag).toLowerCase();
+    // Free-text search across the fields a reader would actually scan.
+    // Escaped for the same reason as the city filter below.
+    if (q && String(q).trim()) {
+      const rx = new RegExp(escapeRegex(String(q).trim()), "i");
+      filter.$or = [{ title: rx }, { body: rx }, { tags: rx }, { city: rx }];
+    }
     // The city filter is an EXACT, case-insensitive match. Interpolating the
     // raw query string into a regex let metacharacters through: "?city=.*"
     // matched every city, defeating the filter (and a crafted pattern is a

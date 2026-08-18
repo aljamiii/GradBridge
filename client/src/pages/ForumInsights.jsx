@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
+import { Skeleton } from "../components/ui";
 
 // Single accent for all single-measure charts (validated: contrast 3:1+ on white).
 const ACCENT = "#4f46e5";
@@ -16,7 +17,9 @@ function StatTile({ label, value, emoji }) {
 }
 
 // Ranked horizontal bar list: label | thin bar | value.
-function BarList({ title, items, valueKey, labelKey, format = (v) => v, prefix = "" }) {
+// `linkFor` turns a row into a deep link back to the filtered forum, so the
+// dashboard is a way IN to the discussion rather than a dead end.
+function BarList({ title, items, valueKey, labelKey, format = (v) => v, prefix = "", linkFor }) {
   const max = Math.max(...items.map((i) => i[valueKey]), 1);
   return (
     <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
@@ -25,23 +28,36 @@ function BarList({ title, items, valueKey, labelKey, format = (v) => v, prefix =
         <p className="mt-3 text-sm text-ink-400">Not enough data yet.</p>
       ) : (
         <div className="mt-3 space-y-2.5">
-          {items.map((item) => (
-            <div key={item[labelKey]} className="group flex items-center gap-3"
-              title={`${item[labelKey]}: ${format(item[valueKey])}`}>
-              <span className="w-28 shrink-0 truncate text-sm text-slate-600">
-                {prefix}{item[labelKey]}
-              </span>
-              <div className="h-3.5 flex-1 rounded-r bg-slate-100">
-                <div
-                  className="h-full rounded-r transition-opacity group-hover:opacity-80"
-                  style={{ width: `${(item[valueKey] / max) * 100}%`, background: ACCENT }}
-                />
+          {items.map((item) => {
+            const row = (
+              <>
+                <span className="w-28 shrink-0 truncate text-sm text-slate-600 group-hover:text-brand-700">
+                  {prefix}{item[labelKey]}
+                </span>
+                <div className="h-3.5 flex-1 rounded-r bg-slate-100">
+                  <div
+                    className="h-full rounded-r transition-opacity group-hover:opacity-80"
+                    style={{ width: `${(item[valueKey] / max) * 100}%`, background: ACCENT }}
+                  />
+                </div>
+                <span className="w-12 shrink-0 text-right text-sm font-medium text-ink-700">
+                  {format(item[valueKey])}
+                </span>
+              </>
+            );
+            const to = linkFor?.(item);
+            const label = `${item[labelKey]}: ${format(item[valueKey])}`;
+            return to ? (
+              <Link key={item[labelKey]} to={to} title={`${label} — see these posts`}
+                className="group flex items-center gap-3 rounded-lg transition-colors hover:bg-white/60">
+                {row}
+              </Link>
+            ) : (
+              <div key={item[labelKey]} className="group flex items-center gap-3" title={label}>
+                {row}
               </div>
-              <span className="w-12 shrink-0 text-right text-sm font-medium text-ink-700">
-                {format(item[valueKey])}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -94,7 +110,7 @@ export default function ForumInsights() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10 sm:px-6 sm:py-10">
+    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Community Insights</h1>
@@ -112,7 +128,14 @@ export default function ForumInsights() {
       )}
 
       {!data ? (
-        <p className="py-16 text-center text-ink-400">Crunching the numbers…</p>
+        <div className="mt-6 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-56 rounded-2xl" />)}
+          </div>
+        </div>
       ) : (
         <>
           {/* Headline numbers */}
@@ -124,12 +147,15 @@ export default function ForumInsights() {
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <BarList title="Top concerns — most-discussed topics"
-              items={data.topTags} labelKey="tag" valueKey="posts" prefix="#" />
+              items={data.topTags} labelKey="tag" valueKey="posts" prefix="#"
+              linkFor={(i) => `/forum?tag=${encodeURIComponent(i.tag)}`} />
             <BarList title="Highest-rated topics (avg ★)"
               items={data.ratingByTag} labelKey="tag" valueKey="avgRating"
-              format={(v) => `${v}★`} prefix="#" />
+              format={(v) => `${v}★`} prefix="#"
+              linkFor={(i) => `/forum?tag=${encodeURIComponent(i.tag)}`} />
             <BarList title="Discussion by city"
-              items={data.byCity} labelKey="city" valueKey="posts" />
+              items={data.byCity} labelKey="city" valueKey="posts"
+              linkFor={(i) => `/forum?city=${encodeURIComponent(i.city)}`} />
             <MonthColumns items={data.byMonth} />
           </div>
 
