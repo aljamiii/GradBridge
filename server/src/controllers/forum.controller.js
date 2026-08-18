@@ -10,6 +10,10 @@ const cleanTags = (tags) =>
       .filter((t) => t.length >= 2 && t.length <= 25)
   )].slice(0, 5);
 
+// Escape user input before it is used as a regex — otherwise "." or ".*"
+// stops being a literal character and becomes a pattern.
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // Shape a post for the client (adds computed fields, hides voter ids).
 const shape = (post, userId) => ({
   id: post._id,
@@ -57,6 +61,8 @@ export const createPost = async (req, res, next) => {
   }
 };
 
+const PAGE_SIZE = 30;
+
 // GET /api/forum?tag=&city=&sort=new|top
 export const listPosts = async (req, res, next) => {
   try {
@@ -64,19 +70,38 @@ export const listPosts = async (req, res, next) => {
 
     const filter = {};
     if (tag) filter.tags = String(tag).toLowerCase();
-    if (city) filter.city = new RegExp(`^${String(city).trim()}$`, "i");
+    // The city filter is an EXACT, case-insensitive match. Interpolating the
+    // raw query string into a regex let metacharacters through: "?city=.*"
+    // matched every city, defeating the filter (and a crafted pattern is a
+    // backtracking risk). Escape it so it can only ever match literal text.
+    if (city) filter.city = new RegExp(`^${escapeRegex(String(city).trim())}$`, "i");
 
-    let posts = await Post.find(filter).populate("author", "name").limit(100);
+    // Sort in the DATABASE, not in JS. The previous version fetched an
+    // unsorted page of 100 and sorted that in memory, so with more than 100
+    // posts the "top" post could be missing from the page it ranked. $size
+    // gives Mongo the upvote count to sort on; createdAt breaks ties, which
+    // matters here because many posts share an upvote total.
+    const sortStage =
+      sort === "top" ? { upvoteCount: -1, createdAt: -1 } : { createdAt: -1 };
 
-    posts =
-      sort === "top"
-        ? posts.sort((a, b) => b.upvotes.length - a.upvotes.length)
-        : posts.sort((a, b) => b.createdAt - a.createdAt);
+    const [posts, total] = await Promise.all([
+      Post.aggregate([
+        { $match: filter },
+        { $addFields: { upvoteCount: { $size: "$upvotes" } } },
+        { $sort: sortStage },
+        { $limit: PAGE_SIZE },
+      ]),
+      Post.countDocuments(filter),
+    ]);
+
+    // aggregate() returns plain objects, so populate them explicitly.
+    await Post.populate(posts, { path: "author", select: "name" });
 
     res.json({
       success: true,
       count: posts.length,
-      posts: posts.slice(0, 30).map((p) => shape(p, req.user._id)),
+      total, // everything matching the filter, so the UI can say "30 of 120"
+      posts: posts.map((p) => shape(p, req.user._id)),
     });
   } catch (err) {
     next(err);
