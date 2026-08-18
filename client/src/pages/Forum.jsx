@@ -225,14 +225,14 @@ function PostCard({ post, onChanged, onPickTag, onPickCity, activeTag, activeCit
                 were inert and only the sidebar could filter. */}
             {post.tags.map((t) => (
               <button key={t} onClick={() => onPickTag?.(t)}
-                title={activeTag === t ? "Clear this filter" : `Show #${t} posts`}
+                title={activeTag === t ? "Clear this filter" : `Show ${t} posts`}
                 className={cx(
                   "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                   activeTag === t
                     ? "bg-brand-600 text-white"
                     : "bg-brand-50 text-brand-700 hover:bg-brand-100"
                 )}>
-                #{t}
+                {t}
               </button>
             ))}
             <span className="ml-auto flex items-center gap-3 text-xs text-ink-400">
@@ -459,7 +459,7 @@ export default function Forum() {
             {filters.tag && (
               <button onClick={() => pickTag(filters.tag)}
                 className="flex items-center gap-1.5 rounded-full bg-brand-500/12 px-3 py-1.5 text-sm font-medium text-brand-700 ring-1 ring-brand-500/20">
-                #{filters.tag}
+                {filters.tag}
                 <Icon name="close" className="h-3 w-3" />
               </button>
             )}
@@ -512,7 +512,7 @@ export default function Forum() {
                   debouncedSearch
                     ? `Nothing matches “${debouncedSearch}”`
                     : filters.tag
-                      ? `Nothing tagged #${filters.tag}`
+                      ? `Nothing tagged “${filters.tag}”`
                       : filters.city
                         ? `No posts from ${filters.city} yet`
                         : "No posts yet"
@@ -556,7 +556,7 @@ export default function Forum() {
                           ? "bg-brand-600 text-white"
                           : "bg-white/60 text-ink-500 ring-1 ring-white/70 hover:bg-white/90 hover:text-brand-700"
                       )}>
-                      #{tag} <span className="opacity-60">{count}</span>
+                      {tag} <span className="opacity-60">{count}</span>
                     </button>
                   ))}
                 </div>

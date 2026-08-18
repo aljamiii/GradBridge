@@ -147,11 +147,11 @@ export default function ForumInsights() {
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <BarList title="Top concerns — most-discussed topics"
-              items={data.topTags} labelKey="tag" valueKey="posts" prefix="#"
+              items={data.topTags} labelKey="tag" valueKey="posts"
               linkFor={(i) => `/forum?tag=${encodeURIComponent(i.tag)}`} />
             <BarList title="Highest-rated topics (avg ★)"
               items={data.ratingByTag} labelKey="tag" valueKey="avgRating"
-              format={(v) => `${v}★`} prefix="#"
+              format={(v) => `${v}★`}
               linkFor={(i) => `/forum?tag=${encodeURIComponent(i.tag)}`} />
             <BarList title="Discussion by city"
               items={data.byCity} labelKey="city" valueKey="posts"
