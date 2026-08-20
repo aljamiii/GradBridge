@@ -62,7 +62,7 @@ export default function Bookings() {
           </p>
         ) : (
           bookings.map((b) => (
-            <div key={b._id} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div key={b._id} className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <h3 className="font-semibold text-ink-900">

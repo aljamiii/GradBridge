@@ -7,6 +7,8 @@ import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
 import { getSocket, disconnectSocket } from "../lib/socket";
 import Icon from "./Icon";
+import { useConnections } from "./Connect";
+import NotificationBell from "./Notifications";
 import { Avatar, cx } from "./ui";
 
 /* ------------------------------------------------------------- nav config */
@@ -39,6 +41,10 @@ const NAV = {
       ],
     },
     {
+      label: "Outreach",
+      items: [{ to: "/email-composer", icon: "message", label: "Email Composer" }],
+    },
+    {
       label: "Guidance",
       items: [
         { to: "/destination-advisor", icon: "globe", label: "Destination Advisor" },
@@ -63,6 +69,7 @@ const NAV = {
       items: [
         { to: "/bookings", icon: "calendar", label: "Session requests" },
         { to: "/chat", icon: "message", label: "Messages", badge: "unread" },
+        { to: "/connections", icon: "users", label: "My Network", badge: "requests" },
       ],
     },
     {
@@ -107,13 +114,15 @@ const NAV = {
 
 // Shown pinned at the bottom of the sidebar for students & mentors.
 const PERSONAL = [
+  { to: "/connections", icon: "users", label: "My Network", badge: "requests" },
   { to: "/bookings", icon: "calendar", label: "My Sessions" },
   { to: "/chat", icon: "message", label: "Chat", badge: "unread" },
 ];
 
 /* -------------------------------------------------------------- sidebar */
 
-function SidebarLink({ item, unread, onNavigate }) {
+function SidebarLink({ item, unread, requests, onNavigate }) {
+  const count = item.badge === "unread" ? unread : item.badge === "requests" ? requests : 0;
   return (
     <NavLink
       to={item.to}
@@ -139,9 +148,9 @@ function SidebarLink({ item, unread, onNavigate }) {
           />
           <Icon name={item.icon} className={cx("h-[18px] w-[18px] shrink-0", isActive && "text-brand-600")} />
           <span className="truncate">{item.label}</span>
-          {item.badge === "unread" && unread > 0 && (
+          {count > 0 && (
             <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-              {unread > 9 ? "9+" : unread}
+              {count > 9 ? "9+" : count}
             </span>
           )}
         </>
@@ -150,7 +159,7 @@ function SidebarLink({ item, unread, onNavigate }) {
   );
 }
 
-function SidebarContent({ user, unread, onNavigate, onLogout }) {
+function SidebarContent({ user, unread, requests, onNavigate, onLogout }) {
   const groups = NAV[user.role] ?? NAV.student;
   const showPersonal = user.role === "student";
 
@@ -158,7 +167,7 @@ function SidebarContent({ user, unread, onNavigate, onLogout }) {
     <div className="flex h-full flex-col">
       {/* brand — goes to the public home page, not the dashboard */}
       <Link to="/" onClick={onNavigate}
-        className="flex h-16 shrink-0 items-center gap-2.5 border-b border-slate-200/70 px-5">
+        className="flex h-16 shrink-0 items-center gap-2.5 border-b border-white/50 px-5">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-[var(--shadow-brand)]">
           <Icon name="bridge" className="h-[18px] w-[18px]" strokeWidth={2} />
         </span>
@@ -176,7 +185,7 @@ function SidebarContent({ user, unread, onNavigate, onLogout }) {
             </p>
             <div className="space-y-0.5">
               {group.items.map((item) => (
-                <SidebarLink key={item.to + item.label} item={item} unread={unread} onNavigate={onNavigate} />
+                <SidebarLink key={item.to + item.label} item={item} unread={unread} requests={requests} onNavigate={onNavigate} />
               ))}
             </div>
           </div>
@@ -189,7 +198,7 @@ function SidebarContent({ user, unread, onNavigate, onLogout }) {
             </p>
             <div className="space-y-0.5">
               {PERSONAL.map((item) => (
-                <SidebarLink key={item.to} item={item} unread={unread} onNavigate={onNavigate} />
+                <SidebarLink key={item.to} item={item} unread={unread} requests={requests} onNavigate={onNavigate} />
               ))}
             </div>
           </div>
@@ -197,7 +206,7 @@ function SidebarContent({ user, unread, onNavigate, onLogout }) {
       </nav>
 
       {/* account */}
-      <div className="shrink-0 border-t border-slate-200/70 p-3">
+      <div className="shrink-0 border-t border-white/50 p-3">
         <Link to="/profile" onClick={onNavigate}
           className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-slate-100">
           <Avatar name={user.name} size="sm" />
@@ -225,6 +234,7 @@ export default function AppShell({ children }) {
   const location = useLocation();
   const [unread, setUnread] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { pendingCount } = useConnections();
 
   const refreshUnread = useCallback(() => {
     api("/api/chat/unread-count").then((d) => setUnread(d.count)).catch(() => {});
@@ -258,8 +268,8 @@ export default function AppShell({ children }) {
   return (
     <div className="flex min-h-screen">
       {/* desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200/70 bg-white/80 backdrop-blur-sm lg:block">
-        <SidebarContent user={user} unread={unread} onLogout={handleLogout} />
+      <aside className="glass-panel fixed inset-y-0 left-0 z-30 hidden w-64 border-r lg:block">
+        <SidebarContent user={user} unread={unread} requests={pendingCount} onLogout={handleLogout} />
       </aside>
 
       {/* mobile drawer */}
@@ -267,8 +277,8 @@ export default function AppShell({ children }) {
         <>
           <div className="fixed inset-0 z-40 bg-ink-900/40 backdrop-blur-sm lg:hidden"
             onClick={() => setDrawerOpen(false)} aria-hidden="true" />
-          <aside className="fixed inset-y-0 left-0 z-50 w-72 border-r border-slate-200 bg-white shadow-2xl lg:hidden">
-            <SidebarContent user={user} unread={unread}
+          <aside className="fixed inset-y-0 left-0 z-50 w-72 border-r border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl lg:hidden">
+            <SidebarContent user={user} unread={unread} requests={pendingCount}
               onNavigate={() => setDrawerOpen(false)} onLogout={handleLogout} />
           </aside>
         </>
@@ -276,7 +286,8 @@ export default function AppShell({ children }) {
 
       {/* content column */}
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
-        <Topbar user={user} unread={unread} onOpenDrawer={() => setDrawerOpen(true)} />
+        <Topbar user={user} unread={unread} requests={pendingCount}
+          onOpenDrawer={() => setDrawerOpen(true)} />
         <main className="flex flex-1 flex-col">{children}</main>
       </div>
     </div>
@@ -285,7 +296,7 @@ export default function AppShell({ children }) {
 
 /* ---------------------------------------------------------------- topbar */
 
-function Topbar({ user, unread, onOpenDrawer }) {
+function Topbar({ user, unread, requests, onOpenDrawer }) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -322,12 +333,13 @@ function Topbar({ user, unread, onOpenDrawer }) {
 
       <div className="ml-auto flex items-center gap-1.5">
         <Link to="/chat" aria-label="Messages"
-          className="relative rounded-lg p-2 text-ink-500 transition-colors hover:bg-slate-100 hover:text-ink-900">
-          <Icon name="bell" className="h-[18px] w-[18px]" />
+          className="relative rounded-lg p-2 text-ink-500 transition-colors hover:bg-white/70 hover:text-ink-900">
+          <Icon name="message" className="h-[18px] w-[18px]" />
           {unread > 0 && (
             <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
           )}
         </Link>
+        <NotificationBell />
         <Link to="/profile" className="rounded-full p-0.5 transition-shadow hover:shadow-[var(--shadow-card)]">
           <Avatar name={user.name} size="sm" />
         </Link>

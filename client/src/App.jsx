@@ -30,8 +30,12 @@ import Scholarships from "./pages/Scholarships";
 import AdminScholarships from "./pages/AdminScholarships";
 import SuccessPath from "./pages/SuccessPath";
 import JobMarketPR from "./pages/JobMarketPR";
-import AggregatorDashboard from "./pages/AggregatorDashboard";
-import DuplicateResolution from "./pages/DuplicateResolution";
+import EmailComposer from "./pages/EmailComposer";
+import Connections from "./pages/Connections";
+import { ConnectionsProvider } from "./components/Connect";
+import { ToastProvider } from "./components/Toast";
+import { NotificationsProvider } from "./components/Notifications";
+
 const STUDENT = ["student"];
 const MEMBERS = ["student", "mentor"];
 const ADMIN = ["admin"];
@@ -48,11 +52,20 @@ function MarketingLayout() {
 // Every signed-in page: sidebar shell + soft app background.
 function AppLayout() {
   return (
-    <div className="bg-app min-h-screen">
-      <AppShell>
-        <Outlet />
-      </AppShell>
-    </div>
+    // Toast must wrap Notifications (live notifications raise toasts), and
+    // Connections wraps the shell so the sidebar badge and every Connect
+    // button on the page share one status store.
+    <ToastProvider>
+      <NotificationsProvider>
+        <ConnectionsProvider>
+          <div className="bg-app min-h-screen">
+            <AppShell>
+              <Outlet />
+            </AppShell>
+          </div>
+        </ConnectionsProvider>
+      </NotificationsProvider>
+    </ToastProvider>
   );
 }
 
@@ -87,6 +100,7 @@ export default function App() {
         <Route path="/financial-risk" element={guarded(<FinancialRisk />, STUDENT)} />
         <Route path="/visa-checklist" element={guarded(<VisaChecklist />, STUDENT)} />
         <Route path="/job-pr" element={guarded(<JobMarketPR />, STUDENT)} />
+        <Route path="/email-composer" element={guarded(<EmailComposer />, STUDENT)} />
 
         <Route path="/forum" element={guarded(<Forum />, MEMBERS)} />
         <Route path="/forum/insights" element={guarded(<ForumInsights />, MEMBERS)} />
@@ -94,18 +108,10 @@ export default function App() {
         <Route path="/success-path" element={guarded(<SuccessPath />, MEMBERS)} />
         <Route path="/bookings" element={guarded(<Bookings />, MEMBERS)} />
         <Route path="/chat" element={guarded(<Chat />, MEMBERS)} />
+        <Route path="/connections" element={guarded(<Connections />, MEMBERS)} />
 
         <Route path="/admin/mentors" element={guarded(<AdminMentors />, ADMIN)} />
         <Route path="/admin/scholarships" element={guarded(<AdminScholarships />, ADMIN)} />
-        <Route
-          path="/admin/aggregator"
-          element={guarded(<AggregatorDashboard />, ADMIN)}
-        />
-
-        <Route
-          path="/admin/aggregator/duplicates"
-          element={guarded(<DuplicateResolution />, ADMIN)}
-        />
       </Route>
     </Routes>
   );

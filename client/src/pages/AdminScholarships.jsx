@@ -104,7 +104,7 @@ export default function AdminScholarships() {
           <p className="py-10 text-center text-ink-400">Nothing {tab === "all" ? "" : tab} right now.</p>
         ) : (
           items.map((s) => (
-            <div key={s._id} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div key={s._id} className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <h3 className="font-semibold text-ink-900">{s.title}</h3>
                 <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${STATUS_BADGE[s.status]}`}>

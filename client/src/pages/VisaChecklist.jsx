@@ -3,7 +3,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
 const inputClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
+  "w-full rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 const CATEGORY_META = {
   identity: { label: "Identity", emoji: "🪪" },
@@ -71,7 +71,7 @@ export default function VisaChecklist() {
       </p>
 
       <form onSubmit={generate}
-        className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+        className="mt-6 flex flex-wrap items-end gap-3 glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
         <label className="min-w-48 flex-1">
           <span className="mb-1 block text-sm font-medium text-slate-600">Target country *</span>
           <input value={form.country} required
@@ -120,7 +120,7 @@ export default function VisaChecklist() {
 
           {/* Grouped checklist */}
           {grouped.map(({ cat, items }) => (
-            <div key={cat} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div key={cat} className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 {CATEGORY_META[cat].emoji} {CATEGORY_META[cat].label}
               </h3>
@@ -150,7 +150,7 @@ export default function VisaChecklist() {
 
           {/* Tips + reminder preview */}
           {data.tips?.length > 0 && (
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
+            <div className="glass-card rounded-2xl p-5 shadow-[var(--shadow-card)]">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
                 💡 Bangladesh-specific tips
               </h3>
@@ -171,7 +171,7 @@ export default function VisaChecklist() {
             </h3>
             <p className="mt-2 text-sm italic text-slate-600">&ldquo;{data.reminderDraft}&rdquo;</p>
             <p className="mt-2 text-xs text-ink-400">
-              Automatic email reminders arrive when deadline alerts launch.
+              Gemini-generated reminder draft — copy and use this reminder for your application deadline.
             </p>
           </div>
         </div>

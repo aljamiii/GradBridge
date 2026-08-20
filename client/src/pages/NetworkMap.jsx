@@ -5,9 +5,10 @@ import "leaflet/dist/leaflet.css";
 import { api } from "../lib/api";
 import { getSocket } from "../lib/socket";
 import { useAuth } from "../context/AuthContext";
+import ConnectButton, { useConnectionStatuses } from "../components/Connect";
 
 const selectClass =
-  "rounded-lg border border-slate-300 px-3 py-2 text-sm text-ink-900 focus:border-brand-500 focus:outline-none";
+  "rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none";
 
 // Pulsing sky-blue dot marking a user who is connected right now.
 const onlineDotHtml = `<span style="position:absolute;top:-5px;right:-7px;width:12px;height:12px">
@@ -110,7 +111,7 @@ function StudentCard({ s, badge, online, onClick, onSayHi }) {
   return (
     <div role="button" tabIndex={0} onClick={onClick}
       onKeyDown={(e) => e.key === "Enter" && onClick()}
-      className="w-full cursor-pointer rounded-lg border border-slate-100 bg-slate-50 p-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
+      className="w-full cursor-pointer rounded-lg border border-slate-100 bg-white/45 p-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
       <div className="flex items-center gap-2.5">
         <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 font-semibold text-white">
           {s.name?.[0] ?? "?"}
@@ -148,11 +149,14 @@ function StudentCard({ s, badge, online, onClick, onSayHi }) {
         </div>
       )}
       {onSayHi && (
-        <button type="button"
-          onClick={(e) => { e.stopPropagation(); onSayHi(); }}
-          className="mt-2 rounded-full bg-brand-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-brand-700">
-          👋 Say hi
-        </button>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <button type="button"
+            onClick={(e) => { e.stopPropagation(); onSayHi(); }}
+            className="rounded-full bg-brand-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-brand-700">
+            Say hi
+          </button>
+          <ConnectButton userId={s.id} name={s.name} />
+        </div>
       )}
     </div>
   );
@@ -424,6 +428,11 @@ export default function NetworkMap() {
 
   const countries = [...new Set(pins.map((p) => p.country))].sort();
 
+  // One bulk status call for everyone currently rendered in the sidebar.
+  useConnectionStatuses(
+    (probe?.students ?? visible).map((p) => String(p.id))
+  );
+
   // ✈️ Fly-to search: geocode a typed place, fly there, run the radius probe.
   const [placeQ, setPlaceQ] = useState("");
   const [placeErr, setPlaceErr] = useState("");
@@ -588,7 +597,7 @@ export default function NetworkMap() {
         <div ref={mapDivRef}
           className="h-[65vh] w-full rounded-xl border border-slate-200 shadow-sm lg:flex-1" />
 
-        <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm lg:h-[65vh] lg:w-72">
+        <aside className="flex w-full shrink-0 flex-col glass-card rounded-2xl p-4 shadow-sm lg:h-[65vh] lg:w-72">
           {probe ? (
             <>
               <h2 className="flex items-center gap-2 font-semibold text-ink-900">

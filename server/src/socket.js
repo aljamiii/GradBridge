@@ -43,6 +43,19 @@ export const initSocket = (httpServer) => {
     // Late joiners (e.g. opening the map mid-session) ask for the full list.
     socket.on("presence:get", (ack) => ack?.([...online.keys()]));
 
+    // "disconnecting" fires while socket.rooms is still populated ("disconnect"
+    // is too late). Clear any typing dots this socket left on someone's screen.
+    socket.on("disconnecting", () => {
+      for (const room of socket.rooms) {
+        if (!room.startsWith("convo:")) continue;
+        socket.to(room).emit("typing:update", {
+          conversationId: room.slice("convo:".length),
+          userId: socket.userId,
+          typing: false,
+        });
+      }
+    });
+
     socket.on("disconnect", () => {
       const left = (online.get(socket.userId) ?? 1) - 1;
       if (left <= 0) {
@@ -78,6 +91,20 @@ export const initSocket = (httpServer) => {
         { unreadFor: null }
       );
       io.to(`user:${socket.userId}`).emit("inbox:update"); // refresh badge
+    });
+
+    // Typing indicator. Ephemeral by design: nothing is stored, so a dropped
+    // event self-heals on the next keystroke (and the client's idle timer).
+    socket.on("typing", ({ conversationId, typing }) => {
+      // No DB lookup — you can only BE in this room because `convo:join`
+      // already checked membership. O(1) instead of a query per keystroke.
+      if (!socket.rooms.has(`convo:${conversationId}`)) return;
+      // socket.to(...) excludes the sender: you never see your own dots.
+      socket.to(`convo:${conversationId}`).emit("typing:update", {
+        conversationId,
+        userId: socket.userId,
+        typing: Boolean(typing),
+      });
     });
 
     // Live message: save via the shared helper, which also emits to rooms.
