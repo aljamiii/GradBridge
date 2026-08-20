@@ -119,6 +119,13 @@ function FavoriteCard({ fav, onUpdateNotes, onRemove, busy }) {
 }
 
 /* ------------------------------------------------------------------- page */
+const QUICK_COUNTRIES = [
+  { label: "USA", value: "United States" },
+  { label: "UK", value: "United Kingdom" },
+  { label: "Canada", value: "Canada" },
+  { label: "Australia", value: "Australia" },
+  { label: "Germany", value: "Germany" },
+];
 
 export default function Universities() {
   const [name, setName] = useState("");
@@ -137,7 +144,13 @@ export default function Universities() {
   }, []);
 
   const savedNames = useMemo(() => new Set(favorites.map((f) => f.name)), [favorites]);
-
+  const resetSearch = () => {
+    setName("");
+    setCountry("");
+    setResults(null);
+    setError("");
+    setTab("results");
+  };
   const search = async (e) => {
     e.preventDefault();
     setSearching(true);
@@ -197,27 +210,124 @@ export default function Universities() {
       <div className="mt-8 grid gap-6 lg:grid-cols-4">
         {/* --------------------------------------------------- search rail */}
         <div className="lg:col-span-1">
-          <Card as="form" onSubmit={search} className="lg:sticky lg:top-24">
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.08em] text-ink-400">
-              Search
-            </p>
-            <div className="space-y-4">
-              <Field label="University name">
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Toronto" />
-              </Field>
-              <Field label="Country" hint="Either field alone works.">
-                <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Canada" />
-              </Field>
-            </div>
-            <Button type="submit" className="mt-5 w-full" loading={searching}>
-              {searching ? "Searching…" : "Search"}
-            </Button>
+          <Card
+            as="form"
+            onSubmit={search}
+            className="overflow-hidden !p-0 lg:sticky lg:top-24"
+          >
+            {/* Search-card heading */}
+            <div className="border-b border-white/60 bg-gradient-to-r from-brand-50/90 to-white/50 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm">
+                  <Icon name="search" className="h-4.5 w-4.5" strokeWidth={2} />
+                </span>
 
-            <div className="mt-5 border-t border-white/60 pt-4">
-              <p className="flex items-center justify-between text-sm">
-                <span className="text-ink-400">Shortlisted</span>
-                <span className="font-bold text-ink-900">{favorites.length}</span>
-              </p>
+                <div>
+                  <h2 className="font-semibold text-ink-900">
+                    Find a university
+                  </h2>
+
+                  <p className="mt-0.5 text-xs text-ink-400">
+                    Search by name, country or both
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5">
+              <div className="space-y-4">
+                <Field label="University name">
+                  <div className="relative">
+                    <Icon
+                      name="graduation"
+                      className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+                    />
+
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. University of Toronto"
+                      className="pl-10"
+                    />
+                  </div>
+                </Field>
+
+                <Field label="Country" hint="You can use common names such as USA or UK.">
+                  <div className="relative">
+                    <Icon
+                      name="globe"
+                      className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+                    />
+
+                    <Input
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      placeholder="e.g. Canada"
+                      className="pl-10"
+                    />
+                  </div>
+                </Field>
+
+                {/* Quick country selections */}
+                <div>
+                  <p className="mb-2 text-xs font-medium text-ink-400">
+                    Popular destinations
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {QUICK_COUNTRIES.map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => setCountry(item.value)}
+                        className={cx(
+                          "rounded-full border px-3 py-1.5 text-xs font-semibold transition-all",
+                          country === item.value
+                            ? "border-brand-300 bg-brand-50 text-brand-700 shadow-sm"
+                            : "border-slate-200 bg-white/70 text-ink-500 hover:border-brand-200 hover:bg-brand-50/60 hover:text-brand-700"
+                        )}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-[1fr_auto] gap-2">
+                <Button type="submit" loading={searching}>
+                  {!searching && <Icon name="search" className="h-4 w-4" />}
+                  {searching ? "Searching…" : "Search universities"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={resetSearch}
+                  disabled={!name && !country && results == null}
+                  className="px-3"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <Icon name="close" className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Shortlist summary */}
+              <button
+                type="button"
+                onClick={() => setTab("saved")}
+                className="mt-5 flex w-full items-center justify-between rounded-xl border border-white/70 bg-white/50 px-3.5 py-3 text-left transition hover:border-brand-200 hover:bg-brand-50/60"
+              >
+                <span className="flex items-center gap-2 text-sm text-ink-500">
+                  <Icon name="star" className="h-4 w-4 text-amber-500" />
+                  My shortlist
+                </span>
+
+                <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-brand-600 px-2 text-xs font-bold text-white">
+                  {favorites.length}
+                </span>
+              </button>
             </div>
           </Card>
         </div>
