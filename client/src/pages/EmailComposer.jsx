@@ -10,6 +10,7 @@ export default function EmailComposer() {
   const [form, setForm] = useState({
     templateId: "",
     professorName: "",
+    professorEmail: "",
     university: "",
     paperTitle: "",
     program: "",
@@ -59,6 +60,11 @@ export default function EmailComposer() {
   // The PhD template is the only one that uses a specific paper.
   const needsPaper = form.templateId === "phd-inquiry";
   const needsProfessor = form.templateId !== "masters-inquiry";
+  const recipientMailto = result
+  ? `mailto:${encodeURIComponent(form.professorEmail.trim())}` +
+    `?subject=${encodeURIComponent(result.subject)}` +
+    `&body=${encodeURIComponent(result.body)}`
+  : "";
 
   return (
     <Page width="6xl">
@@ -94,10 +100,40 @@ export default function EmailComposer() {
 
           <div className="mt-5 space-y-4">
             {needsProfessor && (
-              <Field label="Professor's surname" hint="As they'd be addressed — “Rahman”, not “Dr. A. Rahman”">
-                <Input name="professorName" value={form.professorName} onChange={set}
-                  placeholder="Rahman" />
-              </Field>
+              <>
+                <Field
+                  label="Professor's surname"
+                  hint="As they would be addressed — “Rahman”, not “Dr. A. Rahman”."
+                >
+                  <Input
+                    name="professorName"
+                    value={form.professorName}
+                    onChange={set}
+                    placeholder="Rahman"
+                  />
+                </Field>
+
+                <Field
+                  label="Professor's email"
+                  hint="The address is used only to open the draft in your mail app."
+                >
+                  <div className="relative">
+                    <Icon
+                      name="message"
+                      className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+                    />
+
+                    <Input
+                      type="email"
+                      name="professorEmail"
+                      value={form.professorEmail}
+                      onChange={set}
+                      placeholder="professor@university.edu"
+                      className="pl-10"
+                    />
+                  </div>
+                </Field>
+              </>
             )}
             <Field label="University">
               <Input name="university" value={form.university} onChange={set}
@@ -154,7 +190,15 @@ export default function EmailComposer() {
                     <Icon name={copied === "body" ? "check" : "external"} className="h-3.5 w-3.5" />
                     {copied === "body" ? "Copied" : "Copy all"}
                   </Button>
-                  <Button size="sm" href={result.mailto}>
+                  <Button
+                    size="sm"
+                    href={recipientMailto}
+                    title={
+                      form.professorEmail
+                        ? `Open a draft addressed to ${form.professorEmail}`
+                        : "Add the professor's email to include a recipient"
+                    }
+                  >
                     <Icon name="message" className="h-3.5 w-3.5" />
                     Open in mail app
                   </Button>
