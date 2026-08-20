@@ -11,10 +11,10 @@ export default defineConfig({
     proxy: {
       // Port 5000 is taken by macOS AirPlay Receiver, so use 1384 instead.
       // Must match PORT in server/.env
-      "/api": "http://localhost:1384",
+      "/api": "http://localhost:5000",
       // WebSocket proxy for real-time chat (Socket.io)
       "/socket.io": {
-        target: "http://localhost:1384",
+        target: "http://localhost:5000",
         ws: true,
       },
     },

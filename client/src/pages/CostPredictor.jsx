@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import Icon from "../components/Icon";
@@ -8,6 +9,11 @@ import {
 
 const usd = (n) => `$${Number(n).toLocaleString()}`;
 const bdt = (n) => `৳${Number(n).toLocaleString()}`;
+
+const localMoney = (n, currency) =>
+  `${Number(n).toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  })} ${currency}`;
 
 const LIFESTYLES = [
   { value: "frugal", label: "Frugal", hint: "Shared room, cook at home" },
@@ -28,6 +34,11 @@ export default function CostPredictor() {
   const [error, setError] = useState("");
 
   const budget = user.studentProfile?.budgetUSD;
+
+  const totalLocal =
+  result?.exchange?.usdToLocal && result?.totalUSD
+    ? result.totalUSD * result.exchange.usdToLocal
+    : null;
 
   const predict = async (e) => {
     e.preventDefault();
@@ -137,6 +148,17 @@ export default function CostPredictor() {
                     {usd(result.totalUSD)}
                   </p>
                   {result.totalBDT && (
+                    <p className="mt-1 text-sm text-brand-100">
+                      ≈ {bdt(result.totalBDT)}
+                    </p>
+                  )}
+
+                  {totalLocal && result.exchange.currencyLocal && (
+                    <p className="mt-1 text-sm text-brand-100">
+                      ≈ {localMoney(totalLocal, result.exchange.currencyLocal)}
+                    </p>
+                  )}
+                  {result.totalBDT && (
                     <p className="mt-1 text-sm text-brand-100">≈ {bdt(result.totalBDT)}</p>
                   )}
                 </div>
@@ -168,6 +190,13 @@ export default function CostPredictor() {
               ))}
             </div>
           </Card>
+
+          <Link
+            to={`/financial-risk?cost=${result.totalUSD}`}
+            className="inline-flex rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            Use this cost in Financial Planner
+          </Link>
 
           {/* Budget verdict */}
           {budget != null && (
