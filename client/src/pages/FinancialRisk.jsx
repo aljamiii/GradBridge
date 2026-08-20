@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -18,11 +18,13 @@ const RISK_STYLES = {
 
 export default function FinancialRisk() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const predictedCost = searchParams.get("cost") ?? "";
   const nextYear = new Date();
   nextYear.setFullYear(nextYear.getFullYear() + 1);
 
   const [form, setForm] = useState({
-    totalCostUSD: "",
+    totalCostUSD: predictedCost,
     fundingUSD: user.studentProfile?.budgetUSD ?? "",
     scholarshipUSD: "",
     deadline: nextYear.toISOString().slice(0, 10),
