@@ -2,10 +2,12 @@
 // It automatically attaches the login token and parses errors,
 // so pages never repeat that boilerplate.
 
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 export async function api(path, { method = "GET", body } = {}) {
   const token = localStorage.getItem("gradbridge_token");
 
-  const res = await fetch(path, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
