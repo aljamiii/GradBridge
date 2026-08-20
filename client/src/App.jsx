@@ -35,6 +35,8 @@ import Connections from "./pages/Connections";
 import { ConnectionsProvider } from "./components/Connect";
 import { ToastProvider } from "./components/Toast";
 import { NotificationsProvider } from "./components/Notifications";
+import AggregatorDashboard from "./pages/AggregatorDashboard";
+import DuplicateResolution from "./pages/DuplicateResolution";
 
 const STUDENT = ["student"];
 const MEMBERS = ["student", "mentor"];
@@ -112,6 +114,15 @@ export default function App() {
 
         <Route path="/admin/mentors" element={guarded(<AdminMentors />, ADMIN)} />
         <Route path="/admin/scholarships" element={guarded(<AdminScholarships />, ADMIN)} />
+        <Route
+          path="/admin/aggregator"
+          element={guarded(<AggregatorDashboard />, ADMIN)}
+        />
+
+        <Route
+          path="/admin/aggregator/duplicates"
+          element={guarded(<DuplicateResolution />, ADMIN)}
+        />
       </Route>
     </Routes>
   );
