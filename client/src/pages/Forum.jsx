@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import Icon from "../components/Icon";
 import ConnectButton, { useConnectionStatuses } from "../components/Connect";
 import {
-  Alert, Avatar, Badge, Button, Card, EmptyState, Input, Page, PageHeader, Skeleton, Textarea, cx,
+  Alert, Avatar, Button, Card, EmptyState, Input, Page, PageHeader, Skeleton, Textarea, cx,
 } from "../components/ui";
 
 const timeAgo = (date) => {
@@ -25,7 +26,9 @@ function Stars({ value, my, onRate, readOnly = false }) {
   const [hover, setHover] = useState(0);
   const shown = hover || my || Math.round(value ?? 0);
   return (
-    <span className="inline-flex items-center gap-0.5"
+    // The negative margin keeps the row visually the same height while each
+    // star gets a ~28px tap target instead of the bare 14px icon box.
+    <span className="-my-1.5 inline-flex items-center"
       onMouseLeave={() => setHover(0)}
       title={my ? `You rated ${my} of 5` : "Rate this post"}>
       {[1, 2, 3, 4, 5].map((n) => (
@@ -33,8 +36,11 @@ function Stars({ value, my, onRate, readOnly = false }) {
           onMouseEnter={() => !readOnly && setHover(n)}
           onClick={() => !readOnly && onRate(n)}
           aria-label={`Rate ${n} of 5`}
-          className={cx("transition-transform", !readOnly && "hover:scale-125")}>
-          <Icon name="star" className={cx("h-3.5 w-3.5",
+          className={cx(
+            "flex h-7 w-7 items-center justify-center rounded transition-transform",
+            !readOnly && "hover:scale-110"
+          )}>
+          <Icon name="star" className={cx("h-4 w-4",
             n <= shown ? "fill-amber-400 text-amber-400" : "text-slate-300")} strokeWidth={1.5} />
         </button>
       ))}
@@ -44,42 +50,102 @@ function Stars({ value, my, onRate, readOnly = false }) {
 
 /* --------------------------------------------------------------- post card */
 
-function PostCard({ post, onChanged }) {
+function PostCard({ post, onChanged, onPickTag, onPickCity, activeTag, activeCity }) {
   const [expanded, setExpanded] = useState(false);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
+  const [actError, setActError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(null);
 
+  const startEdit = () => {
+    setDraft({
+      title: post.title,
+      body: post.body,
+      tags: (post.tags ?? []).join(", "),
+      city: post.city ?? "",
+    });
+    setEditing(true);
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setActError("");
+    try {
+      const d = await api(`/api/forum/${post.id}`, { method: "PUT", body: draft });
+      onChanged(d.post);
+      setEditing(false);
+    } catch (err) {
+      setActError(err.message); // keep the form open so nothing typed is lost
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Returns whether it worked, so callers can decide what to keep. Swallowing
+  // the error here used to clear a reply the server never accepted.
   const act = async (path, body) => {
     setBusy(true);
+    setActError("");
     try {
       const d = await api(`/api/forum/${post.id}/${path}`, { method: "POST", body });
       onChanged(d.post);
-    } catch { /* ignore double-clicks */ }
-    finally { setBusy(false); }
+      return true;
+    } catch (err) {
+      setActError(err.message);
+      return false;
+    } finally {
+      setBusy(false);
+    }
   };
 
   const sendComment = async (e) => {
     e.preventDefault();
     if (!comment.trim()) return;
-    await act("comments", { text: comment });
-    setComment("");
+    // Only clear the box once the reply is safely stored.
+    if (await act("comments", { text: comment })) setComment("");
   };
 
   return (
     <Card className="!p-0">
       <div className="flex gap-4 p-5">
-        {/* vote rail */}
-        <button onClick={() => act("upvote")} disabled={busy}
-          aria-pressed={post.upvotedByMe}
-          className={cx(
-            "flex h-fit shrink-0 flex-col items-center gap-0.5 rounded-xl px-2.5 py-2 transition-colors",
-            post.upvotedByMe
-              ? "bg-brand-500/12 text-brand-600 ring-1 ring-brand-500/20"
-              : "text-ink-400 hover:bg-white/70 hover:text-brand-600"
-          )}>
-          <Icon name="trendingUp" className="h-4 w-4" strokeWidth={2.2} />
-          <span className="text-sm font-bold tabular-nums">{post.upvoteCount}</span>
-        </button>
+        {/* vote rail — net score between the two arrows */}
+        <div className="flex h-fit shrink-0 flex-col items-center gap-0.5 rounded-xl px-1.5 py-1.5">
+          <button onClick={() => act("vote", { dir: 1 })} disabled={busy}
+            aria-pressed={post.upvotedByMe}
+            aria-label={post.upvotedByMe ? "Remove your upvote" : "Upvote this post"}
+            title={post.upvotedByMe ? "Remove your upvote" : "This helped"}
+            className={cx(
+              "rounded-lg p-1 transition-colors",
+              post.upvotedByMe
+                ? "bg-brand-500/12 text-brand-600 ring-1 ring-brand-500/20"
+                : "text-ink-400 hover:bg-white/70 hover:text-brand-600"
+            )}>
+            <Icon name="trendingUp" className="h-4 w-4" strokeWidth={2.2} />
+          </button>
+
+          <span className={cx(
+            "text-sm font-bold tabular-nums",
+            post.score > 0 ? "text-brand-700" : post.score < 0 ? "text-red-500" : "text-ink-400"
+          )}
+            title={`${post.upvoteCount} up · ${post.downvoteCount} down`}>
+            {post.score}
+          </span>
+
+          <button onClick={() => act("vote", { dir: -1 })} disabled={busy}
+            aria-pressed={post.downvotedByMe}
+            aria-label={post.downvotedByMe ? "Remove your downvote" : "Downvote this post"}
+            title={post.downvotedByMe ? "Remove your downvote" : "This wasn't accurate or helpful"}
+            className={cx(
+              "rounded-lg p-1 transition-colors",
+              post.downvotedByMe
+                ? "bg-red-500/12 text-red-500 ring-1 ring-red-500/20"
+                : "text-ink-400 hover:bg-white/70 hover:text-red-500"
+            )}>
+            <Icon name="trendingDown" className="h-4 w-4" strokeWidth={2.2} />
+          </button>
+        </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2.5">
@@ -88,31 +154,91 @@ function PostCard({ post, onChanged }) {
               <p className="text-xs text-ink-400">
                 <span className="font-semibold text-ink-700">{post.authorName}</span>
                 {" · "}{timeAgo(post.createdAt)}
+                {post.editedAt && (
+                  <span title={`Edited ${timeAgo(post.editedAt)}`}> · edited</span>
+                )}
                 {post.city && (
-                  <> · <span className="inline-flex items-center gap-0.5">
+                  <> · <button
+                    onClick={() => onPickCity?.(post.city)}
+                    title={`Show posts from ${post.city}`}
+                    className={cx(
+                      "inline-flex items-center gap-0.5 rounded transition-colors hover:text-brand-600",
+                      activeCity === post.city && "font-semibold text-brand-700"
+                    )}
+                  >
                     <Icon name="location" className="h-3 w-3" />{post.city}
-                  </span></>
+                  </button></>
                 )}
               </p>
             </div>
-            {/* Connect with someone whose answer helped you. */}
-            <ConnectButton userId={post.author} name={post.authorName} />
+            {/* Your own post gets Edit; everyone else's gets Connect. */}
+            {post.isMine ? (
+              <button onClick={startEdit}
+                className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-ink-500 transition-colors hover:bg-white/70 hover:text-brand-700">
+                Edit
+              </button>
+            ) : (
+              <ConnectButton userId={post.author} name={post.authorName} />
+            )}
           </div>
 
-          <button onClick={() => setExpanded((v) => !v)}
-            className="mt-2 block text-left">
-            <h3 className="font-bold leading-snug text-ink-900 transition-colors hover:text-brand-700">
-              {post.title}
-            </h3>
-          </button>
+          {editing ? (
+            <form onSubmit={saveEdit} className="mt-2 space-y-2">
+              <Input value={draft.title} maxLength={150}
+                onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                placeholder="Title" aria-label="Post title" />
+              <Textarea rows={5} value={draft.body} maxLength={5000}
+                onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+                placeholder="What happened, with numbers where you have them" aria-label="Post body" />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input value={draft.tags}
+                  onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
+                  placeholder="Tags, comma separated (max 5)" aria-label="Tags" />
+                <Input value={draft.city}
+                  onChange={(e) => setDraft({ ...draft, city: e.target.value })}
+                  placeholder="City" aria-label="City" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button type="submit" disabled={busy || !draft.title.trim() || !draft.body.trim()}>
+                  {busy ? "Saving…" : "Save changes"}
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+                <span className="text-xs text-ink-400">
+                  Editing marks the post as edited for readers.
+                </span>
+              </div>
+            </form>
+          ) : (
+            <>
+              <button onClick={() => setExpanded((v) => !v)}
+                className="mt-2 block text-left">
+                <h3 className="font-bold leading-snug text-ink-900 transition-colors hover:text-brand-700">
+                  {post.title}
+                </h3>
+              </button>
 
-          {!expanded && (
-            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink-500">{post.body}</p>
+              {!expanded && (
+                <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink-500">{post.body}</p>
+              )}
+            </>
           )}
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className={cx("mt-3 flex flex-wrap items-center gap-2", editing && "hidden")}>
+            {/* Tapping a tag is the gesture people expect; previously these
+                were inert and only the sidebar could filter. */}
             {post.tags.map((t) => (
-              <Badge key={t} tone="brand">#{t}</Badge>
+              <button key={t} onClick={() => onPickTag?.(t)}
+                title={activeTag === t ? "Clear this filter" : `Show ${t} posts`}
+                className={cx(
+                  "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
+                  activeTag === t
+                    ? "bg-brand-600 text-white"
+                    : "bg-brand-50 text-brand-700 hover:bg-brand-100"
+                )}>
+                {t}
+              </button>
             ))}
             <span className="ml-auto flex items-center gap-3 text-xs text-ink-400">
               <span className="flex items-center gap-1.5">
@@ -131,6 +257,12 @@ function PostCard({ post, onChanged }) {
           </div>
         </div>
       </div>
+
+      {actError && (
+        <p role="alert" className="mx-5 mb-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+          {actError}
+        </p>
+      )}
 
       {expanded && (
         <div className="animate-rise border-t border-white/60 px-5 pb-5 pt-4">
@@ -235,20 +367,53 @@ function Composer({ onCreated }) {
 /* -------------------------------------------------------------------- page */
 
 export default function Forum() {
+  // Filters live in the URL so a filtered view is shareable, survives a
+  // refresh, and can be linked to from the Insights dashboard.
+  const [params, setParams] = useSearchParams();
   const [posts, setPosts] = useState(null);
-  const [filters, setFilters] = useState({ tag: "", sort: "new" });
+  const [total, setTotal] = useState(0);
+  const [filters, setFilters] = useState({
+    tag: params.get("tag") ?? "",
+    city: params.get("city") ?? "",
+    sort: params.get("sort") ?? "new",
+  });
+  const [search, setSearch] = useState(params.get("q") ?? "");
   const [error, setError] = useState("");
+
+  // Debounced so typing doesn't fire a request per keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const load = useCallback(() => {
     const params = new URLSearchParams();
     if (filters.tag) params.set("tag", filters.tag);
+    if (filters.city) params.set("city", filters.city);
+    if (debouncedSearch) params.set("q", debouncedSearch);
     params.set("sort", filters.sort);
     api(`/api/forum?${params}`)
-      .then((d) => setPosts(d.posts))
+      .then((d) => { setPosts(d.posts); setTotal(d.total ?? d.posts.length); })
       .catch((err) => setError(err.message));
-  }, [filters]);
+  }, [filters, debouncedSearch]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Mirror the active filters back into the address bar.
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (filters.tag) next.set("tag", filters.tag);
+    if (filters.city) next.set("city", filters.city);
+    if (debouncedSearch) next.set("q", debouncedSearch);
+    if (filters.sort !== "new") next.set("sort", filters.sort);
+    setParams(next, { replace: true });
+  }, [filters, debouncedSearch, setParams]);
+
+  const pickTag = (t) => setFilters((f) => ({ ...f, tag: f.tag === t ? "" : t }));
+  const pickCity = (c) => setFilters((f) => ({ ...f, city: f.city === c ? "" : c }));
+  const clearAll = () => { setFilters((f) => ({ ...f, tag: "", city: "" })); setSearch(""); };
+  const hasFilter = Boolean(filters.tag || filters.city || debouncedSearch);
 
   // One bulk status call for every post author on screen.
   useConnectionStatuses([...new Set((posts ?? []).map((p) => String(p.author)).filter(Boolean))]);
@@ -297,15 +462,45 @@ export default function Forum() {
               ))}
             </div>
             {filters.tag && (
-              <button onClick={() => setFilters({ ...filters, tag: "" })}
+              <button onClick={() => pickTag(filters.tag)}
                 className="flex items-center gap-1.5 rounded-full bg-brand-500/12 px-3 py-1.5 text-sm font-medium text-brand-700 ring-1 ring-brand-500/20">
-                #{filters.tag}
+                {filters.tag}
+                <Icon name="close" className="h-3 w-3" />
+              </button>
+            )}
+            {filters.city && (
+              <button onClick={() => pickCity(filters.city)}
+                className="flex items-center gap-1.5 rounded-full bg-brand-500/12 px-3 py-1.5 text-sm font-medium text-brand-700 ring-1 ring-brand-500/20">
+                <Icon name="location" className="h-3 w-3" />
+                {filters.city}
                 <Icon name="close" className="h-3 w-3" />
               </button>
             )}
             <span className="ml-auto text-xs text-ink-400">
-              {posts?.length ?? 0} {posts?.length === 1 ? "post" : "posts"}
+              {/* `total` counts everything matching the filter, so this stays
+                  honest once there are more posts than fit on one page. */}
+              {posts && posts.length < total
+                ? `${posts.length} of ${total} posts`
+                : `${total} ${total === 1 ? "post" : "posts"}`}
             </span>
+          </div>
+
+          <div className="relative">
+            <Icon name="search"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search posts — try “IELTS”, “deposit”, “blocked account”…"
+              aria-label="Search posts"
+              className="w-full rounded-xl border border-white/70 bg-white/60 py-2.5 pl-10 pr-9 text-sm text-ink-900 placeholder-slate-400 backdrop-blur-sm transition-colors focus:border-brand-400 focus:bg-white/90 focus:outline-none focus:ring-4 focus:ring-brand-500/10"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} aria-label="Clear search"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700">
+                <Icon name="close" className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
 
           {error && <Alert tone="error">{error}</Alert>}
@@ -317,20 +512,32 @@ export default function Forum() {
           ) : posts.length === 0 ? (
             <Card>
               <EmptyState
-                icon={<Icon name="message" className="h-6 w-6" />}
-                title={filters.tag ? `Nothing tagged #${filters.tag}` : "No posts yet"}
-                description={filters.tag
-                  ? "Try another tag, or clear the filter to see everything."
+                icon={<Icon name={hasFilter ? "search" : "message"} className="h-6 w-6" />}
+                title={
+                  debouncedSearch
+                    ? `Nothing matches “${debouncedSearch}”`
+                    : filters.tag
+                      ? `Nothing tagged “${filters.tag}”`
+                      : filters.city
+                        ? `No posts from ${filters.city} yet`
+                        : "No posts yet"
+                }
+                description={hasFilter
+                  ? "Try different words, or clear the filters to see everything."
                   : "Be the first — the question you're embarrassed to ask is the one three other people also have."}
-                action={filters.tag && (
-                  <Button variant="secondary" onClick={() => setFilters({ ...filters, tag: "" })}>
-                    Clear filter
+                action={hasFilter && (
+                  <Button variant="secondary" onClick={clearAll}>
+                    Clear filters
                   </Button>
                 )}
               />
             </Card>
           ) : (
-            posts.map((p) => <PostCard key={p.id} post={p} onChanged={patch} />)
+            posts.map((p) => (
+              <PostCard key={p.id} post={p} onChanged={patch}
+                onPickTag={pickTag} onPickCity={pickCity}
+                activeTag={filters.tag} activeCity={filters.city} />
+            ))
           )}
         </div>
 
@@ -354,7 +561,7 @@ export default function Forum() {
                           ? "bg-brand-600 text-white"
                           : "bg-white/60 text-ink-500 ring-1 ring-white/70 hover:bg-white/90 hover:text-brand-700"
                       )}>
-                      #{tag} <span className="opacity-60">{count}</span>
+                      {tag} <span className="opacity-60">{count}</span>
                     </button>
                   ))}
                 </div>

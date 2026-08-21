@@ -65,21 +65,21 @@ export default function SuccessPath() {
 
       {/* Background filters (spec: CGPA, degree/field, country) */}
       <div className="mt-5 flex flex-wrap items-center gap-2">
-        <input type="number" step="0.1" min="2" max="4" placeholder="Min CGPA"
+        <input type="number" step="0.1" min="2" max="4" placeholder="Min CGPA" aria-label="Minimum CGPA"
           value={filters.minCgpa}
           onChange={(e) => setFilters({ ...filters, minCgpa: e.target.value })}
           className={`${inputClass} w-28`} />
-        <input type="number" step="0.1" min="2" max="4" placeholder="Max CGPA"
+        <input type="number" step="0.1" min="2" max="4" placeholder="Max CGPA" aria-label="Maximum CGPA"
           value={filters.maxCgpa}
           onChange={(e) => setFilters({ ...filters, maxCgpa: e.target.value })}
           className={`${inputClass} w-28`} />
-        <select value={filters.field}
+        <select value={filters.field} aria-label="Filter by field of study"
           onChange={(e) => setFilters({ ...filters, field: e.target.value })}
           className={inputClass}>
           <option value="">All fields</option>
           {data?.options.fields.map((f) => <option key={f}>{f}</option>)}
         </select>
-        <select value={filters.country}
+        <select value={filters.country} aria-label="Filter by destination country"
           onChange={(e) => setFilters({ ...filters, country: e.target.value })}
           className={inputClass}>
           <option value="">All countries</option>

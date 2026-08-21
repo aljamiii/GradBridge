@@ -7,6 +7,21 @@ import { notify } from "../services/notify.js";
 
 const MS_PER_MIN = 60 * 1000;
 
+// Human-readable session time for notification and chat text.
+// toLocaleString() on the server renders "9/6/2026, 4:00:00 PM" — ambiguous
+// (6 September or 9 June?), and the seconds are noise. Naming the weekday and
+// month leaves no room for misreading.
+const sessionWhen = (d) =>
+  new Date(d).toLocaleString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
 // POST /api/bookings   body: { mentorId, start, durationMins, topic }  (student)
 export const createBooking = async (req, res, next) => {
   try {
@@ -62,14 +77,14 @@ export const createBooking = async (req, res, next) => {
     await sendSystemMessage(
       req.user._id,
       mentor._id,
-      `📅 Booking request: ${startDate.toLocaleString()} (${duration} min)${topic ? ` — "${topic}"` : ""}`
+      `📅 Booking request: ${sessionWhen(startDate)} (${duration} min)${topic ? ` — "${topic}"` : ""}`
     );
 
     await notify({
       user: mentor._id,
       type: "booking:requested",
       title: `${req.user.name} requested a session`,
-      body: `${startDate.toLocaleString()} · ${duration} min${topic ? ` — ${topic}` : ""}`,
+      body: `${sessionWhen(startDate)} · ${duration} min${topic ? ` — ${topic}` : ""}`,
       link: "/bookings",
       actor: req.user,
     });
@@ -92,6 +107,49 @@ export const listBookings = async (req, res, next) => {
       .populate("mentor", "name email mentorProfile.university");
 
     res.json({ success: true, count: bookings.length, bookings });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PUT /api/bookings/:id/rating   body: { stars, comment }
+// One rating per session, editable afterwards — same semantics as the forum's
+// post ratings, but gated on the session having actually taken place.
+export const rateBooking = async (req, res, next) => {
+  try {
+    const stars = Number(req.body.stars);
+    if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
+      return res.status(400).json({ success: false, message: "Rating must be 1-5 stars." });
+    }
+
+    // Ownership is in the query, not an if-check after the fact.
+    const booking = await Booking.findOne({ _id: req.params.id, student: req.user._id });
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found." });
+    }
+    if (booking.status !== "confirmed") {
+      return res.status(400).json({
+        success: false,
+        message: "Only a confirmed session can be rated.",
+      });
+    }
+    // `end` is the model's virtual (start + duration) — a session can only be
+    // judged once it is over.
+    if (booking.end > new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "You can rate this session once it has finished.",
+      });
+    }
+
+    booking.rating = {
+      stars,
+      comment: (req.body.comment ?? "").trim(),
+      ratedAt: new Date(),
+    };
+    await booking.save();
+
+    res.json({ success: true, booking });
   } catch (err) {
     next(err);
   }
@@ -126,6 +184,11 @@ export const setBookingStatus = async (req, res, next) => {
     }
 
     booking.status = status;
+    // Stamp the mentor's first answer only — a student cancelling later must
+    // not overwrite how quickly the mentor replied.
+    if (req.user.role === "mentor" && !booking.respondedAt) {
+      booking.respondedAt = new Date();
+    }
     await booking.save();
 
     // Notify the other side inside the chat thread.
@@ -133,14 +196,14 @@ export const setBookingStatus = async (req, res, next) => {
     await sendSystemMessage(
       req.user._id,
       req.user.role === "mentor" ? booking.student : booking.mentor,
-      `${emoji} Session on ${booking.start.toLocaleString()} is now ${status}.`
+      `${emoji} Session on ${sessionWhen(booking.start)} is now ${status}.`
     );
 
     await notify({
       user: req.user.role === "mentor" ? booking.student : booking.mentor,
       type: `booking:${status}`,
       title: `Session ${status}`,
-      body: `${booking.start.toLocaleString()} — ${status} by ${req.user.name}.`,
+      body: `${sessionWhen(booking.start)} — ${status} by ${req.user.name}.`,
       link: "/bookings",
       actor: req.user,
     });

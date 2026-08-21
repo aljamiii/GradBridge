@@ -1,7 +1,7 @@
 // The signed-in application layout: a persistent left sidebar + a topbar,
 // with the routed page rendered in the scrolling content column.
 // Marketing pages (/, /login, /register) use MarketingNav instead.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
@@ -251,6 +251,53 @@ export default function AppShell({ children }) {
   // Navigating closes the mobile drawer.
   useEffect(() => setDrawerOpen(false), [location.pathname]);
 
+  // The drawer is a modal dialog, so it owes the same contract as one:
+  // Escape closes it, Tab stays inside it, and focus returns to the button
+  // that opened it. Without this a keyboard user tabbed straight through the
+  // drawer into the page sitting behind the scrim.
+  const drawerRef = useRef(null);
+  const drawerTriggerRef = useRef(null);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+
+    // Capture the trigger now: by cleanup time the ref may point elsewhere.
+    const trigger = drawerTriggerRef.current;
+
+    const focusables = () =>
+      [...(drawerRef.current?.querySelectorAll(
+        'a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])'
+      ) ?? [])].filter((el) => el.offsetParent !== null);
+
+    const raf = requestAnimationFrame(() => focusables()[0]?.focus());
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setDrawerOpen(false);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !drawerRef.current?.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("keydown", onKeyDown);
+      trigger?.focus();
+    };
+  }, [drawerOpen]);
+
   // Lock body scroll while the drawer is open.
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? "hidden" : "";
@@ -277,7 +324,12 @@ export default function AppShell({ children }) {
         <>
           <div className="fixed inset-0 z-40 bg-ink-900/40 backdrop-blur-sm lg:hidden"
             onClick={() => setDrawerOpen(false)} aria-hidden="true" />
-          <aside className="fixed inset-y-0 left-0 z-50 w-72 border-r border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl lg:hidden">
+          <aside
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Main menu"
+            className="fixed inset-y-0 left-0 z-50 w-72 border-r border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl lg:hidden">
             <SidebarContent user={user} unread={unread} requests={pendingCount}
               onNavigate={() => setDrawerOpen(false)} onLogout={handleLogout} />
           </aside>
@@ -286,7 +338,8 @@ export default function AppShell({ children }) {
 
       {/* content column */}
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
-        <Topbar user={user} unread={unread} requests={pendingCount}
+        <Topbar user={user} unread={unread}
+          drawerOpen={drawerOpen} drawerTriggerRef={drawerTriggerRef}
           onOpenDrawer={() => setDrawerOpen(true)} />
         <main className="flex flex-1 flex-col">{children}</main>
       </div>
@@ -296,7 +349,7 @@ export default function AppShell({ children }) {
 
 /* ---------------------------------------------------------------- topbar */
 
-function Topbar({ user, unread, requests, onOpenDrawer }) {
+function Topbar({ user, unread, onOpenDrawer, drawerOpen, drawerTriggerRef }) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -313,7 +366,8 @@ function Topbar({ user, unread, requests, onOpenDrawer }) {
         scrolled ? "border-b border-slate-200/70 shadow-[0_1px_12px_rgb(15_23_42/0.05)]" : "border-b border-transparent"
       )}
     >
-      <button onClick={onOpenDrawer} aria-label="Open menu"
+      <button ref={drawerTriggerRef} onClick={onOpenDrawer} aria-label="Open menu"
+        aria-expanded={drawerOpen} aria-haspopup="dialog"
         className="relative -ml-1 rounded-lg p-2 text-ink-700 transition-colors hover:bg-slate-100 lg:hidden">
         <Icon name="menu" />
         {unread > 0 && (

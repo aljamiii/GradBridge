@@ -118,7 +118,8 @@ export default function Connections() {
     const onPresence = ({ userId, online }) =>
       setOnlineIds((prev) => {
         const next = new Set(prev);
-        online ? next.add(String(userId)) : next.delete(String(userId));
+        if (online) next.add(String(userId));
+        else next.delete(String(userId));
         return next;
       });
     const onConnections = () => load(query);
