@@ -41,13 +41,13 @@ export default function Scholarships() {
 
       {/* Filters */}
       <div className="mt-5 flex flex-wrap gap-2">
-        <input value={filters.q} placeholder="Search title…"
+        <input value={filters.q} placeholder="Search title…" aria-label="Search scholarships by title"
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
           className={`${inputClass} flex-1 min-w-40`} />
-        <input value={filters.country} placeholder="Country"
+        <input value={filters.country} placeholder="Country" aria-label="Filter by country"
           onChange={(e) => setFilters({ ...filters, country: e.target.value })}
           className={`${inputClass} w-36`} />
-        <select value={filters.fundingType}
+        <select value={filters.fundingType} aria-label="Filter by funding type"
           onChange={(e) => setFilters({ ...filters, fundingType: e.target.value })}
           className={inputClass}>
           <option value="all">All funding</option>

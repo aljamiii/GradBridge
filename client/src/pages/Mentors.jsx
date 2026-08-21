@@ -126,7 +126,7 @@ function BookingForm({ mentor, onDone }) {
         </label>
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-ink-500">Duration</span>
-          <select value={form.durationMins}
+          <select value={form.durationMins} aria-label="Session duration"
             onChange={(e) => setForm({ ...form, durationMins: Number(e.target.value) })}
             className={inputClass}>
             <option value={30}>30 minutes</option>
@@ -134,7 +134,7 @@ function BookingForm({ mentor, onDone }) {
           </select>
         </label>
       </div>
-      <input placeholder="Topic (e.g., SOP review for UofT)" value={form.topic}
+      <input placeholder="Topic (e.g., SOP review for UofT)" value={form.topic} aria-label="Session topic"
         onChange={(e) => setForm({ ...form, topic: e.target.value })}
         maxLength={200} className={inputClass} />
       <button type="submit" disabled={busy}

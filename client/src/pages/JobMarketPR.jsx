@@ -48,12 +48,12 @@ function JobMarket() {
       </p>
 
       <form onSubmit={search} className="mt-4 flex flex-wrap gap-2">
-        <select value={form.country}
+        <select value={form.country} aria-label="Country to search jobs in"
           onChange={(e) => setForm({ ...form, country: e.target.value })}
           className={inputClass}>
           {countries.map((c) => <option key={c}>{c}</option>)}
         </select>
-        <input value={form.field} required placeholder="Field (e.g., software engineer)"
+        <input value={form.field} required placeholder="Field (e.g., software engineer)" aria-label="Job field"
           onChange={(e) => setForm({ ...form, field: e.target.value })}
           className={`${inputClass} flex-1 min-w-48`} />
         <button type="submit" disabled={loading}
@@ -137,7 +137,7 @@ function PRCalculator() {
         </label>
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-ink-500">Highest education</span>
-          <select value={form.education}
+          <select value={form.education} aria-label="Highest education"
             onChange={(e) => setForm({ ...form, education: e.target.value })}
             className={`${inputClass} w-full`}>
             <option value="highschool">High school</option>

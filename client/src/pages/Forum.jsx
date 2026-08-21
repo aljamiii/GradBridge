@@ -26,7 +26,9 @@ function Stars({ value, my, onRate, readOnly = false }) {
   const [hover, setHover] = useState(0);
   const shown = hover || my || Math.round(value ?? 0);
   return (
-    <span className="inline-flex items-center gap-0.5"
+    // The negative margin keeps the row visually the same height while each
+    // star gets a ~28px tap target instead of the bare 14px icon box.
+    <span className="-my-1.5 inline-flex items-center"
       onMouseLeave={() => setHover(0)}
       title={my ? `You rated ${my} of 5` : "Rate this post"}>
       {[1, 2, 3, 4, 5].map((n) => (
@@ -34,8 +36,11 @@ function Stars({ value, my, onRate, readOnly = false }) {
           onMouseEnter={() => !readOnly && setHover(n)}
           onClick={() => !readOnly && onRate(n)}
           aria-label={`Rate ${n} of 5`}
-          className={cx("transition-transform", !readOnly && "hover:scale-125")}>
-          <Icon name="star" className={cx("h-3.5 w-3.5",
+          className={cx(
+            "flex h-7 w-7 items-center justify-center rounded transition-transform",
+            !readOnly && "hover:scale-110"
+          )}>
+          <Icon name="star" className={cx("h-4 w-4",
             n <= shown ? "fill-amber-400 text-amber-400" : "text-slate-300")} strokeWidth={1.5} />
         </button>
       ))}

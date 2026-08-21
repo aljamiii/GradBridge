@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import Icon from "../components/Icon";
 import {
@@ -176,8 +175,6 @@ export default function Universities() {
     await api(`/api/favorites/${id}`, { method: "DELETE" });
     setFavorites((f) => f.filter((x) => x._id !== id));
   });
-
-  const showing = tab === "results" ? results : favorites;
 
   return (
     <Page width="6xl">

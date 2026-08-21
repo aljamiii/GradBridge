@@ -27,6 +27,9 @@
   --color-ink-700: #1e293b;
   --color-ink-500: #475569;
   --color-ink-400: #64748b;
+  /* Used by the "·" separators in Mentors and Bookings. Without it Tailwind
+     never generates `text-ink-300` and those glyphs inherit body colour. */
+  --color-ink-300: #94a3b8;
 
   /* Layered shadows: soft + tight, so elevation reads as light not a border */
   --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px -4px rgb(15 23 42 / 0.08);

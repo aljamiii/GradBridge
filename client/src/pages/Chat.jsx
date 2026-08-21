@@ -134,7 +134,8 @@ export default function Chat() {
     const onUpdate = ({ userId, online }) =>
       setOnlineIds((prev) => {
         const next = new Set(prev);
-        online ? next.add(String(userId)) : next.delete(String(userId));
+        if (online) next.add(String(userId));
+        else next.delete(String(userId));
         return next;
       });
     socket.on("presence:update", onUpdate);

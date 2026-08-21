@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -18,11 +18,13 @@ const RISK_STYLES = {
 
 export default function FinancialRisk() {
   const { user } = useAuth();
+  // Prefilled when the student arrives from the Cost Predictor.
+  const handoff = useLocation().state ?? {};
   const nextYear = new Date();
   nextYear.setFullYear(nextYear.getFullYear() + 1);
 
   const [form, setForm] = useState({
-    totalCostUSD: "",
+    totalCostUSD: handoff.totalCostUSD ?? "",
     fundingUSD: user.studentProfile?.budgetUSD ?? "",
     scholarshipUSD: "",
     deadline: nextYear.toISOString().slice(0, 10),
@@ -53,8 +55,24 @@ export default function FinancialRisk() {
       <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Financial Risk & Savings Planner</h1>
       <p className="mt-1 text-ink-500">
         Cost vs. funding, honestly — the gap, the risk, and exactly what to save
-        each month. Get your cost estimate from the{" "}
-        <Link to="/cost-predictor" className="text-brand-600 hover:underline">Cost Predictor</Link> first.
+        each month.{" "}
+        {handoff.totalCostUSD ? (
+          <>
+            Using your{" "}
+            <Link to="/cost-predictor" className="text-brand-600 hover:underline">
+              Cost Predictor
+            </Link>{" "}
+            estimate{handoff.from ? ` for ${handoff.from}` : ""} — edit it below if you have a better number.
+          </>
+        ) : (
+          <>
+            Don&apos;t have a cost figure yet? The{" "}
+            <Link to="/cost-predictor" className="text-brand-600 hover:underline">
+              Cost Predictor
+            </Link>{" "}
+            will hand one straight through.
+          </>
+        )}
       </p>
 
       <form onSubmit={analyze}

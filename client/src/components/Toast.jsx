@@ -38,36 +38,44 @@ export function ToastProvider({ children }) {
         className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-2">
         {toasts.map((t) => {
           const tone = TONES[t.tone] ?? TONES.success;
-          const Wrapper = t.onClick ? "button" : "div";
+          // The dismiss control is a sibling of the clickable body, never a
+          // descendant of it: a button inside a button is invalid HTML, and the
+          // old span[role=button] only answered Enter, not Space.
+          const Body = t.onClick ? "button" : "div";
           return (
-            <Wrapper
+            <div
               key={t.id}
-              onClick={t.onClick ? () => { t.onClick(); dismiss(t.id); } : undefined}
               className={cx(
-                "animate-rise pointer-events-auto flex w-full items-start gap-3 rounded-xl bg-white/85 p-3 text-left",
-                "shadow-[var(--shadow-float)] ring-1 backdrop-blur-xl transition-transform",
-                tone.ring,
-                t.onClick && "hover:scale-[1.01]"
+                "animate-rise pointer-events-auto flex w-full items-start gap-2 rounded-xl bg-white/85 p-3",
+                "shadow-[var(--shadow-float)] ring-1 backdrop-blur-xl",
+                tone.ring
               )}
             >
-              <span className={cx("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", tone.chip)}>
-                <Icon name={tone.icon} className="h-4 w-4" strokeWidth={2.2} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-ink-900">{t.title}</span>
-                {t.body && <span className="mt-0.5 block text-xs leading-snug text-ink-400">{t.body}</span>}
-              </span>
-              <span
-                role="button"
-                tabIndex={0}
-                aria-label="Dismiss"
-                onClick={(e) => { e.stopPropagation(); dismiss(t.id); }}
-                onKeyDown={(e) => e.key === "Enter" && dismiss(t.id)}
-                className="shrink-0 cursor-pointer rounded p-0.5 text-ink-400 hover:text-ink-700"
+              <Body
+                type={t.onClick ? "button" : undefined}
+                onClick={t.onClick ? () => { t.onClick(); dismiss(t.id); } : undefined}
+                className={cx(
+                  "flex min-w-0 flex-1 items-start gap-3 rounded-lg text-left transition-transform",
+                  t.onClick && "hover:scale-[1.01]"
+                )}
+              >
+                <span className={cx("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", tone.chip)}>
+                  <Icon name={tone.icon} className="h-4 w-4" strokeWidth={2.2} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-ink-900">{t.title}</span>
+                  {t.body && <span className="mt-0.5 block text-xs leading-snug text-ink-400">{t.body}</span>}
+                </span>
+              </Body>
+              <button
+                type="button"
+                aria-label={`Dismiss: ${t.title}`}
+                onClick={() => dismiss(t.id)}
+                className="-m-1 shrink-0 rounded p-1 text-ink-400 transition-colors hover:text-ink-700"
               >
                 <Icon name="close" className="h-3.5 w-3.5" />
-              </span>
-            </Wrapper>
+              </button>
+            </div>
           );
         })}
       </div>
