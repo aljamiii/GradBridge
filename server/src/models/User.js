@@ -34,6 +34,33 @@ const userSchema = new mongoose.Schema(
         score: Number,
       },
       researchInterest: String,
+      researchExperience: {
+        hasExperience: { type: Boolean, default: false },
+        months: { type: Number, min: 0, default: 0 },
+        experienceType: {
+          type: String,
+          enum: [
+            "None",
+            "Undergraduate thesis",
+            "Research project",
+            "Research assistant",
+            "Laboratory research",
+            "Industry research",
+            "Other",
+          ],
+          default: "None",
+        },
+        description: {
+          type: String,
+          trim: true,
+          maxlength: 1000,
+        },
+        publications: {
+          type: Number,
+          min: 0,
+          default: 0,
+        },
+      },
       preferredCountry: String,
       budgetUSD: Number, // yearly budget in USD
 
@@ -56,8 +83,25 @@ const userSchema = new mongoose.Schema(
         university: String,
         degreeLevel: { type: String, enum: ["Bachelors", "Masters", "PhD"] },
         subject: String, // e.g., "Computer Science"
+        // What this student is happy to help newcomers with — powers the
+        // map's "who can help with X" filter. Fixed vocabulary so it's
+        // filterable (free text wouldn't be).
+        helpWith: {
+          type: [{
+            type: String,
+            enum: ["visa", "housing", "funding", "part-time jobs", "admissions", "settling in"],
+          }],
+          default: [],
+        },
         lat: Number, // geocoded server-side via Nominatim
         lng: Number,
+        // The same coordinates as GeoJSON, so the 2dsphere index below can
+        // answer real geospatial queries ($geoNear). GeoJSON order is
+        // [lng, lat] — the classic gotcha, opposite of how humans say it.
+        location: {
+          type: { type: String, enum: ["Point"] },
+          coordinates: { type: [Number], default: undefined }, // [lng, lat]
+        },
       },
     },
 
@@ -78,6 +122,10 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Geospatial index over abroad students' pins: lets $geoNear find "students
+// within N km of this point" straight from the index instead of scanning.
+userSchema.index({ "studentProfile.abroad.location": "2dsphere" });
 
 // Before saving: hash the password (only if it was created/changed).
 userSchema.pre("save", async function () {

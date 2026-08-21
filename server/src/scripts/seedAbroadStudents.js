@@ -19,6 +19,18 @@ const DEMO = [
   { name: "Imran Kabir", city: "Stockholm", country: "Sweden", university: "KTH Royal Institute of Technology", degreeLevel: "Masters", subject: "Machine Learning", lat: 59.3498, lng: 18.0707 },
 ];
 
+// What each demo student is happy to help newcomers with (map filter).
+const HELP = {
+  "Nusrat Jahan": ["housing", "settling in", "admissions"],
+  "Fahim Rahman": ["funding", "admissions"],
+  "Sadia Islam": ["visa", "housing"],
+  "Tanvir Ahmed": ["part-time jobs", "settling in"],
+  "Mehnaz Chowdhury": ["visa", "admissions"],
+  "Rakib Hasan": ["funding", "settling in"],
+  "Farhana Akter": ["housing", "part-time jobs"],
+  "Imran Kabir": ["admissions", "funding"],
+};
+
 await mongoose.connect(process.env.MONGO_URI);
 console.log("🍃 Connected. Seeding abroad students...");
 
@@ -26,7 +38,10 @@ for (const d of DEMO) {
   const email = `${d.name.toLowerCase().replace(/\s+/g, ".")}@demo.gradbridge.dev`;
   const exists = await User.findOne({ email });
   if (exists) {
-    console.log(`  ↺ exists: ${d.name}`);
+    // Idempotent re-run: backfill fields added after the first seed.
+    exists.studentProfile.abroad.helpWith = HELP[d.name] ?? [];
+    await exists.save();
+    console.log(`  ↺ updated: ${d.name}`);
     continue;
   }
   await User.create({
@@ -42,6 +57,7 @@ for (const d of DEMO) {
         university: d.university,
         degreeLevel: d.degreeLevel,
         subject: d.subject,
+        helpWith: HELP[d.name] ?? [],
         lat: d.lat,
         lng: d.lng,
       },

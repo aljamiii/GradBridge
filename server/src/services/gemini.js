@@ -5,7 +5,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Free-tier friendly default; override with GEMINI_MODEL in .env if needed.
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
 let client = null;
 const getClient = () => {

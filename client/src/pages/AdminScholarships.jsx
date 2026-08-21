@@ -53,23 +53,23 @@ export default function AdminScholarships() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">🛡️ Scholarship Data Review</h1>
-          <p className="mt-1 text-slate-500">
+          <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Scholarship Data Review</h1>
+          <p className="mt-1 text-ink-500">
             AI-flagged entries wait here for your decision. Clean entries are auto-approved.
           </p>
         </div>
         <button onClick={scrapeNow} disabled={scraping}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
           {scraping ? "🕷️ Scraping… (~30s)" : "🕷️ Run scraper now"}
         </button>
       </div>
 
       {/* Scrape report */}
       {report && (
-        <div className="mt-4 rounded-lg bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+        <div className="mt-4 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-800">
           {report.map((r) => (
             <p key={r.source}>
               <strong>{r.source}:</strong>{" "}
@@ -90,7 +90,7 @@ export default function AdminScholarships() {
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`rounded-lg px-4 py-1.5 text-sm font-medium capitalize ${
-              tab === t ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-100"
+              tab === t ? "bg-brand-600 text-white" : "bg-white text-slate-600 hover:bg-slate-100"
             }`}>
             {t}
           </button>
@@ -99,19 +99,19 @@ export default function AdminScholarships() {
 
       <div className="mt-4 space-y-3">
         {items === null ? (
-          <p className="py-10 text-center text-slate-400">Loading…</p>
+          <p className="py-10 text-center text-ink-400">Loading…</p>
         ) : items.length === 0 ? (
-          <p className="py-10 text-center text-slate-400">Nothing {tab === "all" ? "" : tab} right now.</p>
+          <p className="py-10 text-center text-ink-400">Nothing {tab === "all" ? "" : tab} right now.</p>
         ) : (
           items.map((s) => (
-            <div key={s._id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div key={s._id} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <h3 className="font-semibold text-slate-800">{s.title}</h3>
+                <h3 className="font-semibold text-ink-900">{s.title}</h3>
                 <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${STATUS_BADGE[s.status]}`}>
                   {s.status}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-ink-500">
                 {[s.provider, s.country, s.deadline && `⏰ ${s.deadline}`, s.fundingType]
                   .filter(Boolean).join(" · ")}
               </p>
@@ -142,7 +142,7 @@ export default function AdminScholarships() {
                 )}
                 {s.link && (
                   <a href={s.link} target="_blank" rel="noreferrer"
-                    className="ml-auto text-sm text-indigo-600 hover:underline">
+                    className="ml-auto text-sm text-brand-600 hover:underline">
                     source ↗
                   </a>
                 )}

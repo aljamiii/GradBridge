@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
+// What an abroad student can offer newcomers — must match the User model enum.
+const HELP_TOPICS = ["visa", "housing", "funding", "part-time jobs", "admissions", "settling in"];
+
 // Shared input styling
 const inputClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none";
+  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 // A labelled field wrapper so the forms stay tidy.
 function Field({ label, children }) {
@@ -19,12 +22,18 @@ function Field({ label, children }) {
 function StudentForm({ user, onSave, saving }) {
   const p = user.studentProfile ?? {};
   const a = p.abroad ?? {};
+  const r = p.researchExperience ?? {};
   const [form, setForm] = useState({
     degree: p.degree ?? "",
     cgpa: p.cgpa ?? "",
     englishTestName: p.englishTest?.name ?? "None",
     englishTestScore: p.englishTest?.score ?? "",
     researchInterest: p.researchInterest ?? "",
+    researchHasExperience: r.hasExperience ?? false,
+    researchMonths: r.months ?? "",
+    researchExperienceType: r.experienceType ?? "None",
+    researchDescription: r.description ?? "",
+    researchPublications: r.publications ?? 0,
     preferredCountry: p.preferredCountry ?? "",
     budgetUSD: p.budgetUSD ?? "",
     weatherTolerance: p.weatherTolerance ?? "no-preference",
@@ -36,9 +45,18 @@ function StudentForm({ user, onSave, saving }) {
     abroadUniversity: a.university ?? "",
     abroadDegreeLevel: a.degreeLevel ?? "Masters",
     abroadSubject: a.subject ?? "",
+    abroadHelpWith: a.helpWith ?? [],
   });
 
   const set = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const toggleHelp = (topic) =>
+    setForm((f) => ({
+      ...f,
+      abroadHelpWith: f.abroadHelpWith.includes(topic)
+        ? f.abroadHelpWith.filter((t) => t !== topic)
+        : [...f.abroadHelpWith, topic],
+    }));
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -51,6 +69,21 @@ function StudentForm({ user, onSave, saving }) {
           score: form.englishTestScore === "" ? undefined : Number(form.englishTestScore),
         },
         researchInterest: form.researchInterest,
+        researchExperience: {
+          hasExperience: form.researchHasExperience,
+          months: form.researchHasExperience
+            ? Number(form.researchMonths || 0)
+            : 0,
+          experienceType: form.researchHasExperience
+            ? form.researchExperienceType
+            : "None",
+          description: form.researchHasExperience
+            ? form.researchDescription.trim()
+            : "",
+          publications: form.researchHasExperience
+            ? Number(form.researchPublications || 0)
+            : 0,
+        },
         preferredCountry: form.preferredCountry,
         budgetUSD: form.budgetUSD === "" ? undefined : Number(form.budgetUSD),
         weatherTolerance: form.weatherTolerance,
@@ -62,6 +95,7 @@ function StudentForm({ user, onSave, saving }) {
           university: form.abroadUniversity,
           degreeLevel: form.abroadDegreeLevel,
           subject: form.abroadSubject,
+          helpWith: form.abroadHelpWith,
         },
       },
     });
@@ -69,7 +103,7 @@ function StudentForm({ user, onSave, saving }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">
         Academic Profile
       </h2>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -97,6 +131,96 @@ function StudentForm({ user, onSave, saving }) {
           <input name="researchInterest" value={form.researchInterest} onChange={set}
             placeholder="Machine Learning" className={inputClass} />
         </Field>
+        <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <label className="flex items-center gap-2 text-sm font-medium text-ink-700">
+            <input
+              type="checkbox"
+              checked={form.researchHasExperience}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  researchHasExperience: e.target.checked,
+                  researchExperienceType: e.target.checked
+                    ? form.researchExperienceType
+                    : "None",
+                })
+              }
+              className="h-4 w-4 rounded border-slate-300"
+            />
+
+            I have research experience
+          </label>
+
+          {form.researchHasExperience && (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Field label="Research experience type">
+                <select
+                  name="researchExperienceType"
+                  value={form.researchExperienceType}
+                  onChange={set}
+                  className={inputClass}
+                  required
+                >
+                  <option value="None">Select experience type</option>
+                  <option value="Undergraduate thesis">
+                    Undergraduate thesis
+                  </option>
+                  <option value="Research project">Research project</option>
+                  <option value="Research assistant">Research assistant</option>
+                  <option value="Laboratory research">
+                    Laboratory research
+                  </option>
+                  <option value="Industry research">Industry research</option>
+                  <option value="Other">Other</option>
+                </select>
+              </Field>
+
+              <Field label="Research duration (months)">
+                <input
+                  name="researchMonths"
+                  type="number"
+                  min="0"
+                  value={form.researchMonths}
+                  onChange={set}
+                  placeholder="6"
+                  className={inputClass}
+                  required
+                />
+              </Field>
+
+              <Field label="Number of publications">
+                <input
+                  name="researchPublications"
+                  type="number"
+                  min="0"
+                  value={form.researchPublications}
+                  onChange={set}
+                  placeholder="0"
+                  className={inputClass}
+                />
+              </Field>
+
+              <div className="sm:col-span-2">
+                <Field label="Research description">
+                  <textarea
+                    name="researchDescription"
+                    value={form.researchDescription}
+                    onChange={set}
+                    maxLength={1000}
+                    rows={4}
+                    placeholder="Describe your thesis, project, research methods, laboratory work, responsibilities, and outcomes."
+                    className={inputClass}
+                    required
+                  />
+                </Field>
+
+                <p className="mt-1 text-right text-xs text-slate-400">
+                  {form.researchDescription.length}/1000
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
         <Field label="Preferred country">
           <input name="preferredCountry" value={form.preferredCountry} onChange={set}
             placeholder="Canada" className={inputClass} />
@@ -107,7 +231,7 @@ function StudentForm({ user, onSave, saving }) {
         </Field>
       </div>
 
-      <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+      <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-ink-400">
         Lifestyle Preferences
       </h2>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -127,10 +251,10 @@ function StudentForm({ user, onSave, saving }) {
         </Field>
       </div>
 
-      <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+      <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-ink-400">
         🗺️ Network Map
       </h2>
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-ink-700">
         <input type="checkbox" checked={form.abroadOptIn}
           onChange={(e) => setForm({ ...form, abroadOptIn: e.target.checked })}
           className="h-4 w-4 rounded border-slate-300" />
@@ -160,11 +284,31 @@ function StudentForm({ user, onSave, saving }) {
             <input name="abroadSubject" value={form.abroadSubject} onChange={set}
               placeholder="Computer Science" className={inputClass} />
           </Field>
+          <div className="sm:col-span-2">
+            <span className="mb-1 block text-sm font-medium text-slate-600">
+              I can help newcomers with… (shown on your map card)
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {HELP_TOPICS.map((topic) => {
+                const on = form.abroadHelpWith.includes(topic);
+                return (
+                  <button key={topic} type="button" onClick={() => toggleHelp(topic)}
+                    className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                      on
+                        ? "border-amber-500 bg-amber-50 text-amber-700"
+                        : "border-slate-300 bg-white text-ink-500 hover:border-amber-400"
+                    }`}>
+                    {on ? "✓ " : ""}{topic}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
       <button type="submit" disabled={saving}
-        className="rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        className="rounded-lg bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
         {saving ? "Saving…" : "Save profile"}
       </button>
     </form>
@@ -233,7 +377,7 @@ function MentorForm({ user, onSave, saving }) {
         <input name="availability" value={form.availability} onChange={set}
           placeholder="Weekends, 8–10pm Bangladesh time" className={inputClass} />
       </Field>
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-ink-700">
         <input type="checkbox" checked={form.isVisible}
           onChange={(e) => setForm({ ...form, isVisible: e.target.checked })}
           className="h-4 w-4 rounded border-slate-300" />
@@ -241,7 +385,7 @@ function MentorForm({ user, onSave, saving }) {
       </label>
 
       <button type="submit" disabled={saving}
-        className="rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        className="rounded-lg bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
         {saving ? "Saving…" : "Save profile"}
       </button>
     </form>
@@ -268,9 +412,9 @@ export default function Profile() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-800">Your Profile</h1>
-      <p className="mt-1 text-slate-500">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Your Profile</h1>
+      <p className="mt-1 text-ink-500">
         {user.role === "student"
           ? "This information powers your AI cost estimates, eligibility checks, and compatibility scores."
           : "Students will see this when searching for mentors."}
@@ -288,7 +432,7 @@ export default function Profile() {
         </div>
       )}
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mt-6 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
         {user.role === "mentor" ? (
           <MentorForm user={user} onSave={handleSave} saving={saving} />
         ) : (

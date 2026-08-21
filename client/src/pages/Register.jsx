@@ -1,24 +1,26 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import AuthLayout from "../components/AuthLayout";
+import { Alert, Button, Field, Input, cx } from "../components/ui";
+
+const ROLES = [
+  { value: "student", icon: "🎓", label: "Student", desc: "Planning to study abroad" },
+  { value: "mentor", icon: "🧭", label: "Mentor", desc: "Guiding students (verified)" },
+];
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-    role: "student",
+    name: "", email: "", phone: "", password: "", role: "student",
   });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // One handler for every input: uses the input's name attribute.
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault(); // stop the browser's full-page form reload
@@ -34,68 +36,66 @@ export default function Register() {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none";
-
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-800">Create your account</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Start planning your journey abroad.
-        </p>
-
-        {error && (
-          <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          {/* Role picker */}
-          <div className="grid grid-cols-2 gap-2">
-            {["student", "mentor"].map((r) => (
-              <button
-                type="button"
-                key={r}
-                onClick={() => setForm({ ...form, role: r })}
-                className={`rounded-lg border px-3 py-2 text-sm font-medium capitalize ${
-                  form.role === r
-                    ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                    : "border-slate-300 text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                {r === "student" ? "🎓 Student" : "🧭 Mentor"}
-              </button>
-            ))}
-          </div>
-
-          <input name="name" placeholder="Full name" value={form.name}
-            onChange={handleChange} required className={inputClass} />
-          <input name="email" type="email" placeholder="Email" value={form.email}
-            onChange={handleChange} required className={inputClass} />
-          <input name="phone" placeholder="Phone (optional)" value={form.phone}
-            onChange={handleChange} className={inputClass} />
-          <input name="password" type="password" placeholder="Password (min 6 characters)"
-            value={form.password} onChange={handleChange} required minLength={6}
-            className={inputClass} />
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-lg bg-indigo-600 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {submitting ? "Creating account…" : "Sign up"}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-slate-500">
+    <AuthLayout
+      title="Create your account"
+      subtitle="One profile — every tool personalises itself around it."
+      footer={
+        <>
           Already have an account?{" "}
-          <Link to="/login" className="font-medium text-indigo-600 hover:underline">
+          <Link to="/login" className="font-semibold text-brand-600 hover:underline">
             Log in
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      {error && <Alert tone="error" className="mb-5">{error}</Alert>}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Role picker */}
+        <div className="grid grid-cols-2 gap-3">
+          {ROLES.map((r) => (
+            <button type="button" key={r.value}
+              onClick={() => setForm({ ...form, role: r.value })}
+              aria-pressed={form.role === r.value}
+              className={cx(
+                "rounded-xl border p-3 text-left transition-all duration-200",
+                form.role === r.value
+                  ? "border-brand-600 bg-brand-50 ring-4 ring-brand-500/10"
+                  : "border-slate-300 hover:border-slate-400 hover:bg-slate-50"
+              )}>
+              <span className="text-lg">{r.icon}</span>
+              <span className={cx("mt-1 block text-sm font-semibold",
+                form.role === r.value ? "text-brand-700" : "text-ink-700")}>
+                {r.label}
+              </span>
+              <span className="mt-0.5 block text-xs leading-snug text-ink-400">{r.desc}</span>
+            </button>
+          ))}
+        </div>
+
+        <Field label="Full name">
+          <Input name="name" autoComplete="name" placeholder="K. M. Muhaiminul Islam"
+            value={form.name} onChange={handleChange} required />
+        </Field>
+        <Field label="Email">
+          <Input name="email" type="email" autoComplete="email" placeholder="you@example.com"
+            value={form.email} onChange={handleChange} required />
+        </Field>
+        <Field label="Phone" hint="Optional — mentors can reach you faster.">
+          <Input name="phone" autoComplete="tel" placeholder="+880 1XXX-XXXXXX"
+            value={form.phone} onChange={handleChange} />
+        </Field>
+        <Field label="Password" hint="At least 6 characters.">
+          <Input name="password" type="password" autoComplete="new-password"
+            placeholder="••••••••" value={form.password} onChange={handleChange}
+            required minLength={6} />
+        </Field>
+
+        <Button type="submit" size="lg" loading={submitting} className="w-full">
+          {submitting ? "Creating account…" : "Create account"}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

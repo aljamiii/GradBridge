@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none";
+  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10";
 
 const timeAgo = (date) => {
   const days = Math.floor((Date.now() - new Date(date)) / 86400000);
@@ -49,32 +49,32 @@ function PostCard({ post, onChanged }) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
       <div className="flex items-start gap-3">
         {/* Upvote column */}
         <button onClick={() => act("upvote")} disabled={busy}
           className={`flex flex-col items-center rounded-lg px-2 py-1 text-sm ${
-            post.upvotedByMe ? "bg-indigo-50 text-indigo-600" : "text-slate-400 hover:bg-slate-50"
+            post.upvotedByMe ? "bg-brand-50 text-brand-600" : "text-ink-400 hover:bg-slate-50"
           }`}>
           ▲<span className="font-semibold">{post.upvoteCount}</span>
         </button>
 
         <div className="min-w-0 flex-1">
           <button onClick={() => setExpanded(!expanded)} className="text-left">
-            <h3 className="font-semibold text-slate-800 hover:text-indigo-700">{post.title}</h3>
+            <h3 className="font-semibold text-ink-900 hover:text-brand-700">{post.title}</h3>
           </button>
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-ink-400">
             {post.authorName} · {timeAgo(post.createdAt)}
             {post.city && <> · 📍 {post.city}</>}
           </p>
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {post.tags.map((t) => (
-              <span key={t} className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs text-indigo-700">
+              <span key={t} className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs text-brand-700">
                 #{t}
               </span>
             ))}
-            <span className="ml-auto flex items-center gap-2 text-xs text-slate-400">
+            <span className="ml-auto flex items-center gap-2 text-xs text-ink-400">
               <Stars value={post.avgRating} my={post.myRating} onRate={(n) => act("rate", { stars: n })} />
               {post.avgRating != null && <span>{post.avgRating} ({post.ratingCount})</span>}
               <span>💬 {post.comments.length}</span>
@@ -83,14 +83,14 @@ function PostCard({ post, onChanged }) {
 
           {expanded && (
             <div className="mt-3 border-t border-slate-100 pt-3">
-              <p className="whitespace-pre-wrap text-sm text-slate-700">{post.body}</p>
+              <p className="whitespace-pre-wrap text-sm text-ink-700">{post.body}</p>
 
               {/* Comments */}
               <div className="mt-4 space-y-2">
                 {post.comments.map((c) => (
                   <div key={c.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                    <span className="font-medium text-slate-700">{c.authorName}</span>{" "}
-                    <span className="text-xs text-slate-400">{timeAgo(c.createdAt)}</span>
+                    <span className="font-medium text-ink-700">{c.authorName}</span>{" "}
+                    <span className="text-xs text-ink-400">{timeAgo(c.createdAt)}</span>
                     <p className="text-slate-600">{c.text}</p>
                   </div>
                 ))}
@@ -99,7 +99,7 @@ function PostCard({ post, onChanged }) {
                 <input value={comment} onChange={(e) => setComment(e.target.value)}
                   placeholder="Write a reply…" className={inputClass} />
                 <button type="submit" disabled={busy || !comment.trim()}
-                  className="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                  className="shrink-0 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
                   Reply
                 </button>
               </form>
@@ -136,14 +136,14 @@ function NewPostForm({ onCreated }) {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)}
-        className="w-full rounded-xl border-2 border-dashed border-slate-300 bg-white px-4 py-3 text-left text-slate-400 hover:border-indigo-400 hover:text-indigo-500">
+        className="w-full rounded-xl border-2 border-dashed border-slate-300 bg-white px-4 py-3 text-left text-ink-400 hover:border-brand-400 hover:text-brand-500">
         ✍️ Share your experience or ask the community…
       </button>
     );
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <form onSubmit={submit} className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]">
       {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
       <input value={form.title} required maxLength={150} placeholder="Title"
         onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputClass} />
@@ -158,7 +158,7 @@ function NewPostForm({ onCreated }) {
       </div>
       <div className="flex gap-2">
         <button type="submit" disabled={busy}
-          className="rounded-lg bg-indigo-600 px-5 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white shadow-[var(--shadow-brand)] transition-all hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50">
           {busy ? "Posting…" : "Post"}
         </button>
         <button type="button" onClick={() => setOpen(false)}
@@ -193,14 +193,14 @@ export default function Forum() {
   const allTags = [...new Set((posts ?? []).flatMap((p) => p.tags))].slice(0, 10);
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">🗣️ Community Forum</h1>
-          <p className="mt-1 text-slate-500">Real experiences from students on the same journey.</p>
+          <h1 className="animate-rise text-2xl font-bold tracking-tight text-ink-900 sm:text-[1.75rem]">Community Forum</h1>
+          <p className="mt-1 text-ink-500">Real experiences from students on the same journey.</p>
         </div>
         <Link to="/forum/insights"
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
           📊 Insights Dashboard
         </Link>
       </div>
@@ -212,12 +212,12 @@ export default function Forum() {
       {/* Filters */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button onClick={() => setFilters({ ...filters, tag: "" })}
-          className={`rounded-full px-3 py-1 text-sm ${!filters.tag ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-100"}`}>
+          className={`rounded-full px-3 py-1 text-sm ${!filters.tag ? "bg-brand-600 text-white" : "bg-white text-slate-600 hover:bg-slate-100"}`}>
           all
         </button>
         {allTags.map((t) => (
           <button key={t} onClick={() => setFilters({ ...filters, tag: t })}
-            className={`rounded-full px-3 py-1 text-sm ${filters.tag === t ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-100"}`}>
+            className={`rounded-full px-3 py-1 text-sm ${filters.tag === t ? "bg-brand-600 text-white" : "bg-white text-slate-600 hover:bg-slate-100"}`}>
             #{t}
           </button>
         ))}
@@ -235,9 +235,9 @@ export default function Forum() {
 
       <div className="mt-4 space-y-3">
         {posts === null ? (
-          <p className="py-10 text-center text-slate-400">Loading…</p>
+          <p className="py-10 text-center text-ink-400">Loading…</p>
         ) : posts.length === 0 ? (
-          <p className="py-10 text-center text-slate-400">No posts yet — start the conversation!</p>
+          <p className="py-10 text-center text-ink-400">No posts yet — start the conversation!</p>
         ) : (
           posts.map((p) => <PostCard key={p.id} post={p} onChanged={patch} />)
         )}
