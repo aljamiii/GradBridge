@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -226,7 +226,10 @@ export default function NetworkMap() {
   }, [fitOn, fitByCity, user]);
 
   // Fit lookup for a pin — null when we have no rating for that city.
-  const fitOf = (p) => (fitOn ? fitByCity?.[`${p.city}|${p.country}`] ?? null : null);
+  const fitOf = useCallback(
+    (p) => (fitOn ? fitByCity?.[`${p.city}|${p.country}`] ?? null : null),
+    [fitOn, fitByCity]
+  );
 
   // Country stats (DB aggregation) → the clickable chips above the map.
   const [stats, setStats] = useState(null);
@@ -424,7 +427,9 @@ export default function NetworkMap() {
         { maxZoom: 6 }
       );
     }
-  }, [visible, expandedCity, onlineIds, fitOn, fitByCity, navigate]);
+    // fitOn is read directly (marker colour) as well as through fitOf; it is a
+    // boolean, so listing it costs no extra renders.
+  }, [visible, expandedCity, onlineIds, fitOn, fitOf, navigate]);
 
   const countries = [...new Set(pins.map((p) => p.country))].sort();
 
@@ -493,13 +498,13 @@ export default function NetworkMap() {
 
       {/* Filters */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <select value={filters.country}
+        <select value={filters.country} aria-label="Filter by country"
           onChange={(e) => setFilters({ ...filters, country: e.target.value })}
           className={selectClass}>
           <option value="all">All countries</option>
           {countries.map((c) => <option key={c}>{c}</option>)}
         </select>
-        <select value={filters.degreeLevel}
+        <select value={filters.degreeLevel} aria-label="Filter by degree level"
           onChange={(e) => setFilters({ ...filters, degreeLevel: e.target.value })}
           className={selectClass}>
           <option value="all">All degrees</option>
@@ -507,10 +512,10 @@ export default function NetworkMap() {
           <option>Masters</option>
           <option>PhD</option>
         </select>
-        <input value={filters.subject} placeholder="Filter by subject…"
+        <input value={filters.subject} placeholder="Filter by subject…" aria-label="Filter by subject"
           onChange={(e) => setFilters({ ...filters, subject: e.target.value })}
           className={selectClass} />
-        <select value={filters.helpWith}
+        <select value={filters.helpWith} aria-label="Filter by what they can help with"
           onChange={(e) => setFilters({ ...filters, helpWith: e.target.value })}
           className={selectClass}>
           <option value="all">Can help with…</option>
@@ -521,7 +526,7 @@ export default function NetworkMap() {
 
         {/* Fly-to search: think in city names, not clicks */}
         <form onSubmit={flyToPlace} className="ml-auto flex items-center gap-2">
-          <input value={placeQ} placeholder='Fly to a city… (e.g., "Frankfurt")'
+          <input value={placeQ} placeholder='Fly to a city… (e.g., "Frankfurt")' aria-label="Fly to a city"
             onChange={(e) => setPlaceQ(e.target.value)}
             className={selectClass} />
           <button type="submit"

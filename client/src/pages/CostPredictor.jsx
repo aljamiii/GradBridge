@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import Icon from "../components/Icon";
 import {
-  Alert, Badge, Button, Card, EmptyState, Field, Input, Page, PageHeader, Skeleton, cx,
+  Alert, Button, Card, EmptyState, Field, Input, Page, PageHeader, Skeleton, cx,
 } from "../components/ui";
 
 const usd = (n) => `$${Number(n).toLocaleString()}`;
@@ -233,6 +233,30 @@ export default function CostPredictor() {
               </ul>
             </Card>
           )}
+
+          {/* Carry the number the student just produced into the savings
+              planner, rather than telling them to write it down. */}
+          <Card className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-ink-900">Can you cover this?</h3>
+              <p className="mt-0.5 text-xs text-ink-400">
+                Take {usd(result.totalUSD)} through to the savings planner — no need to retype it.
+              </p>
+            </div>
+            <Button
+              to="/financial-risk"
+              state={{
+                totalCostUSD: result.totalUSD,
+                from: result.input.city
+                  ? `${result.input.city}, ${result.input.country}`
+                  : result.input.country,
+              }}
+              variant="secondary"
+              className="shrink-0"
+            >
+              Plan my savings <Icon name="arrowRight" className="h-4 w-4" />
+            </Button>
+          </Card>
 
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs text-ink-400">
             <span>1 USD ≈ {result.exchange.usdToBdt?.toFixed(1)} BDT</span>

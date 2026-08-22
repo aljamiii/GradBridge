@@ -12,8 +12,16 @@ const postSchema = new mongoose.Schema(
     },
     city: { type: String, trim: true }, // optional; insights aggregate by city
 
-    // Upvotes: store voter ids so one user = one vote (toggle).
+    // Votes: store voter ids so one user = one vote (toggle). Up and down are
+    // separate arrays and a user may appear in AT MOST ONE of them — the
+    // controller moves them across rather than letting both hold the same id.
+    // Score = upvotes - downvotes.
     upvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    downvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    // Set the first time an author edits, so the UI can be honest that the
+    // text changed after people voted on it.
+    editedAt: Date,
 
     // Star ratings (1-5): one per user, updatable. "How helpful is this topic?"
     ratings: [

@@ -3,7 +3,8 @@ import { Router } from "express";
 import {
   createPost,
   listPosts,
-  toggleUpvote,
+  votePost,
+  updatePost,
   ratePost,
   addComment,
 } from "../controllers/forum.controller.js";
@@ -17,7 +18,8 @@ router.use(protect, authorize("student", "mentor"));
 router.get("/insights", getInsights);   // GET  /api/forum/insights (before /:id routes!)
 router.post("/", createPost);           // POST /api/forum
 router.get("/", listPosts);             // GET  /api/forum?tag=&city=&sort=
-router.post("/:id/upvote", toggleUpvote);
+router.put("/:id", updatePost);          // edit your own post
+router.post("/:id/vote", votePost);      // { dir: 1 | -1 }
 router.post("/:id/rate", ratePost);
 router.post("/:id/comments", addComment);
 

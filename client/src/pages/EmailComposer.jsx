@@ -56,7 +56,6 @@ export default function EmailComposer() {
     }
   };
 
-  const selected = templates.find((t) => t.id === form.templateId);
   // The PhD template is the only one that uses a specific paper.
   const needsPaper = form.templateId === "phd-inquiry";
   const needsProfessor = form.templateId !== "masters-inquiry";

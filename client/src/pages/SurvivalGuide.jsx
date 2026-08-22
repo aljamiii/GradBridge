@@ -3,7 +3,6 @@ import { Link, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { api } from "../lib/api";
-import { useAuth } from "../context/AuthContext";
 
 const CATEGORIES = {
   mosques: { label: "Mosques", emoji: "🕌", color: "#16a34a" },
@@ -39,7 +38,6 @@ const studentPin = L.divIcon({
 });
 
 export default function SurvivalGuide() {
-  const { user } = useAuth();
   const [q, setQ] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -170,7 +168,7 @@ export default function SurvivalGuide() {
       </p>
 
       <form onSubmit={search} className="mt-5 flex flex-wrap gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)}
+        <input value={q} onChange={(e) => setQ(e.target.value)} aria-label="University or address to explore"
           placeholder='University or address (e.g., "University of Toronto, Canada")'
           className="min-w-64 flex-1 rounded-xl border border-white/70 bg-white/60 backdrop-blur-sm px-3.5 py-2.5 text-ink-900 placeholder-slate-400 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10" />
         <button type="submit" disabled={loading}
