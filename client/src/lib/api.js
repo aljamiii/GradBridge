@@ -7,6 +7,12 @@
 // It now also carries `.status` and `.kind` for anything that wants to tell a
 // permission failure apart from a server fault apart from a dead connection.
 
+// In development this stays empty, so requests use relative paths and the vite
+// proxy forwards them. In production Vercel serves the app on one domain and
+// Render serves the API on another, so the build needs the absolute API origin.
+// Vite inlines this at BUILD time - changing it in the dashboard needs a redeploy.
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 const kindFor = (status) => {
   if (status === 401 || status === 403) return "permission";
   if (status === 404) return "notfound";
@@ -27,7 +33,7 @@ export async function api(path, { method = "GET", body, signal } = {}) {
 
   let res;
   try {
-    res = await fetch(path, {
+    res = await fetch(`${API_BASE}${path}`, {
       method,
       signal,
       headers: {
