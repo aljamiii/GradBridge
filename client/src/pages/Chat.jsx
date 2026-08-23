@@ -109,6 +109,7 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
   const bottomRef = useRef(null);
+  const listRef = useRef(null);   // the scrollable message column
   const typingRef = useRef(false);   // what we last told the server
   const typingTimer = useRef(null);  // idle countdown → "stopped typing"
 
@@ -161,8 +162,14 @@ export default function Chat() {
       if (msg.conversation !== activeId) return;
       // Dedupe: our own messages arrive twice (send-ack + room broadcast).
       setMessages((m) => (m.some((x) => x._id === msg._id) ? m : [...m, msg]));
-      // Reading it live, so clear the unread immediately.
-      if (String(msg.sender) !== String(user.id)) socket?.emit("convo:read", activeId);
+      if (String(msg.sender) !== String(user.id)) {
+        // Reading it live, so clear the unread immediately.
+        socket?.emit("convo:read", activeId);
+        // They sent it, so they have clearly stopped typing. Doing this here
+        // rather than on any `messages` change means MY sending a message no
+        // longer wipes THEIR dots while they are still typing.
+        setPeerTyping(false);
+      }
     };
     socket?.on("message:new", onNew);
 
@@ -189,13 +196,17 @@ export default function Chat() {
     };
   }, [activeId, loadInbox, user.id]);
 
-  // Their dots stop the moment a message from them lands.
+  // scrollIntoView() scrolls every scrollable ancestor, including the page
+  // itself - that is what made the whole screen jump when the typing dots
+  // appeared, pushing them out of view. Scrolling the column directly keeps
+  // the movement inside the thread. And if the reader has scrolled up through
+  // history, leave them where they are instead of yanking them to the bottom.
   useEffect(() => {
-    setPeerTyping(false);
-  }, [messages]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = listRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom > 140) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, peerTyping]);
 
   // Emit only when the typing STATE changes, not on every keystroke — one
@@ -470,7 +481,8 @@ export default function Chat() {
               </div>
 
               {/* messages */}
-              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
+              <div ref={listRef}
+                className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
                 {loadingThread ? (
                   <div className="space-y-3">
                     {[...Array(5)].map((_, i) => (
