@@ -27,6 +27,19 @@ const app = express();
 app.use(cors());            // allow the React dev server to call this API
 app.use(express.json());    // parse JSON request bodies into req.body
 
+// This is an API-only server — the React app is deployed separately. Without
+// a root route Express answers "Cannot GET /", which reads as a dead service
+// to anyone who opens the base URL. Answer with a short index instead.
+app.get("/", (req, res) => {
+  res.json({
+    service: "GradBridge API",
+    status: "running",
+    docs: "All endpoints live under /api",
+    health: "/api/health",
+    frontend: "https://grad-bridge-theta.vercel.app",
+  });
+});
+
 // --- Routes (each feature gets its own file in src/routes) ---
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
